@@ -1,0 +1,846 @@
+/* =========================================================
+  BPS Dashboard - Style (Complete + Responsive)
+  ========================================================= */
+
+/* ---------- Variabel Warna & Layout ---------- */
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --background-color: #f4f7f9;
+  --text-color: #333;
+  --card-bg: #fff;
+  --sidebar-bg: #2c3e50;
+  --sidebar-hover: #34495e;
+  --brand-color: #ecf0f1;
+  --sidebar-width: 250px;
+  --sidebar-width-collapsed: 72px;
+}
+
+/* ---------- Reset & Dasar ---------- */
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--background-color);
+  margin: 0;
+  color: var(--text-color);
+}
+
+/* ---------- Layout Wrapper ---------- */
+.dashboard-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  background-color: var(--sidebar-bg);
+  color: var(--brand-color);
+  padding-top: 20px;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  overflow-y: auto;
+  z-index: 1000;
+  transition: left 0.3s ease, width 0.25s ease;
+}
+
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px 14px 8px;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar-logo .logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.brand {
+  color: var(--brand-color);
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.2px;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 18px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 10px;
+  margin: 4px 8px;
+  transition: background-color 0.2s ease;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background-color: var(--sidebar-hover);
+}
+
+.nav-item i {
+  width: 20px;
+  text-align: center;
+}
+
+.nav-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Submenu KB-S Mart */
+.kbs-mart-menu {
+  margin: 4px 8px;
+}
+
+.kbs-mart-menu summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+}
+
+.kbs-mart-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.kbs-mart-menu[open] summary {
+  background-color: var(--sidebar-hover);
+}
+
+.kbs-mart-menu .caret {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.kbs-mart-menu[open] .caret {
+  transform: rotate(90deg);
+}
+
+.sub-menu {
+  list-style: none;
+  margin: 4px 0 10px 0;
+  padding: 0 0 6px 44px;
+}
+
+.sub-menu a {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: #eaeaea;
+  text-decoration: none;
+}
+
+.sub-menu a:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
+/* Sidebar Collapsed */
+.collapse-toggle {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1.1rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.collapse-toggle:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+.sidebar.collapsed .brand,
+.sidebar.collapsed .nav-text {
+  display: none;
+}
+
+.sidebar.collapsed .sub-menu {
+  padding-left: 0;
+}
+
+.sidebar.collapsed .kbs-mart-menu .caret {
+  display: none;
+}
+
+/* ---------- Main Content ---------- */
+.main-content {
+  margin-left: var(--sidebar-width);
+  padding: 60px 30px 30px;
+  flex-grow: 1;
+  transition: margin-left 0.25s ease, padding 0.3s ease;
+}
+
+.sidebar.collapsed ~ .main-content {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
+/* ---------- Header ---------- */
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+/* ---------- Cards & Grids ---------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  padding: 20px;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.count-number {
+  font-size: 3rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-top: 10px;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  padding: 10px 20px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-action {
+  background-color: var(--secondary-color);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 0.9em;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-action.detail { background-color: #007bff; }
+.btn-action.edit  { background-color: #ffc107; color: #333; }
+.btn-action.delete { background-color: #dc3545; }
+.btn-action-group { display: flex; gap: 5px; justify-content: center; align-items: center; }
+
+/* ---------- Tables ---------- */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  white-space: nowrap;
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.profile-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ---------- Forms ---------- */
+form label {
+  display: block;
+  margin-top: 15px;
+  font-weight: 600;
+}
+
+form input[type="text"],
+form input[type="email"],
+form input[type="date"],
+form select,
+form input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background: #fff;
+}
+
+/* ---------- Detail/Profile ---------- */
+.detail-card {
+  padding: 30px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.profile-img-lg {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 5px solid #eee;
+  margin-bottom: 15px;
+}
+
+.profile-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.profile-info p {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.profile-info strong {
+  display: inline-block;
+  width: 120px;
+}
+
+/* ---------- Status Chips ---------- */
+.status {
+  display: inline-block;
+  padding: 4px 8px;
+  margin: 2px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #fff;
+  text-transform: capitalize;
+}
+.status.hadir-awal, .status.hadir { background-color: #28a745; }
+.status.telat-1, .status.telat-2, .status.telat-3 { background-color: #ffc107; color: #333; }
+.status.izin, .status.cuti { background-color: #17a2b8; }
+.status.sakit, .status.absen { background-color: #dc3545; }
+.status.dinas-luar, .status.tugas { background-color: #6f42c1; }
+
+.card-statistic { text-align: center; }
+
+.bukti-foto {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+/* ---------- Info Blocks ---------- */
+.card-description {
+  margin-bottom: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 25px;
+  border-left: 5px solid var(--primary-color);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.card-description h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.4rem;
+  color: #333;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.description-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.desc-item {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.desc-item:hover {
+  transform: translateY(-5px);
+}
+
+.desc-item strong {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desc-item ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.desc-item li {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* ---------- Utilities ---------- */
+.text-success { color: #28a745; }
+.text-warning { color: #ffc107; }
+.text-info  { color: #17a2b8; }
+.text-danger { color: #dc3545; }
+.text-primary { color: #007bff; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to  { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Mobile & Tablet Fixes ---------- */
+.menu-toggle {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 1101;
+  display: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background-color: #3f51b5;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 900;
+}
+
+body.sidebar-open {
+  overflow: hidden;
+}
+
+@media (max-width: 992px) {
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar {
+    left: calc(-1 * var(--sidebar-width));
+  }
+
+  .sidebar.active {
+    left: 0;
+  }
+
+  .sidebar.active ~ .menu-toggle {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    padding: 16px;
+  }
+
+  .sidebar-logo {
+    display: none;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .card { padding: 16px; }
+  .count-number { font-size: 2.2rem; }
+  .description-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  .detail-card { padding: 20px; max-width: 100%; }
+  .profile-info strong { width: 100px; }
+}
+
+@media (max-width: 576px) {
+    .card-grid { grid-template-columns: 1fr; }
+  .data-table { min-width: 520px; }
+  .btn { padding: 9px 16px; }
+  .btn-action { padding: 6px 10px; font-size: 0.85em; }
+  .card-description { padding: 18px; }
+}
+
+@media (max-width: 500px) {
+  .card-grid { grid-template-columns: 1fr; }
+}
+/* Form Card */
+.form-card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Box Style (mirip AdminLTE) */
+.box {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.box-header {
+    padding: 10px 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.box-body {
+    padding: 15px;
+}
+
+.box-footer {
+    padding: 10px 15px;
+    border-top: 1px solid #ddd;
+}
+/* Bagian ini sudah dioptimalkan dan digabungkan */
+.content-wrapper {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
+.category-sidebar {
+    flex-basis: 250px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 20px;
+    height: fit-content;
+}
+.category-sidebar h4 {
+    margin-bottom: 15px;
+    color: #333;
+}
+.category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.category-item {
+    margin-bottom: 10px;
+}
+.category-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #555;
+    transition: background-color 0.2s;
+}
+.category-link.active, .category-link:hover {
+    background-color: #f0f0f0;
+}
+.category-link.active {
+    background-color: #e9ecef;
+    font-weight: bold;
+    color: #007bff;
+}
+.category-count {
+    background-color: #007bff;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+.stok-barang-page {
+    flex-grow: 1;
+}
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+.product-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+    background-color: #fff;
+    transition: transform 0.2s;
+}
+.product-card:hover {
+    transform: translateY(-5px);
+}
+.product-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-bottom: 1px solid #ddd;
+}
+.product-info {
+    padding: 15px;
+}
+.product-info h5 {
+    font-size: 16px;
+    margin-bottom: 5px;
+    color: #333;
+}
+.product-info p {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+.product-info .promo-price {
+    color: red;
+    font-weight: bold;
+}
+.product-info .original-price {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 12px;
+    margin-right: 5px;
+}
+.product-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    border-top: 1px solid #ddd;
+}
+.btn-action {
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 14px;
+    color: #fff;
+}
+.btn-action.edit {
+    background-color: #007bff;
+}
+.btn-action.delete {
+    background-color: #dc3545;
+}
+#produk_list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.product-card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    width: calc(33.333% - 20px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    padding: 15px;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+.product-card:hover { transform: translateY(-5px); }
+.product-card img.product-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+.product-card h4 {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+.product-card p {
+    margin: 4px 0;
+    font-size: 0.9rem;
+}
+.card-footer {
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+.card-footer .btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+@media (max-width: 992px) {
+    .product-card { width: calc(50% - 20px); }
+}
+@media (max-width: 576px) {
+    .product-card { width: 100%; }
+}
+.card-footer {
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.card-footer .btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+/* Container utama */
+/* Parent container untuk kartu barang */
+.product-grid-container {
+    display: grid;
+    grid-auto-flow: column;   /* susun horizontal */
+    grid-auto-columns: 220px; /* lebar tiap kartu */
+    gap: 20px;
+    overflow-x: auto;         /* scroll horizontal jika overflow */
+    padding: 10px;            /* opsional, beri jarak dari tepi */
+}
+
+/* Kartu produk */
+.product-card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    min-width: 220px;          /* lebar minimum */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Gambar produk */
+.product-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+/* Info produk */
+.product-info {
+    padding: 12px;
+    flex-grow: 1;
+}
+
+.product-info h5 {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.product-info p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+/* Tombol aksi */
+.product-actions {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    border-top: 1px solid #eee;
+    background: #f8f9fa;
+}
+
+.btn-action {
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-action.edit {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-action.delete {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Responsive (opsional) */
+@media (max-width: 992px) {
+    .product-grid-container {
+        grid-auto-columns: 180px; /* kartu lebih kecil di layar medium */
+    }
+}
+
+@media (max-width: 576px) {
+    .product-grid-container {
+        grid-auto-columns: 140px; /* kartu lebih kecil di layar kecil */
+    }
+}
