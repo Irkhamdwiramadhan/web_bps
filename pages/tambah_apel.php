@@ -99,55 +99,63 @@ if ($result_pegawai->num_rows > 0) {
 </main>
 
 <script>
-    function toggleFormFields() {
-        var kondisiApel = document.getElementById('kondisi_apel').value;
-        var formTidakAda = document.getElementById('form_tidak_ada');
-        var formAdaLupa = document.getElementById('form_ada_lupa');
-        var formFoto = document.getElementById('form_foto');
-        var tabelKehadiran = document.querySelector('.data-table');
+function toggleFormFields() {
+    var kondisiApel = document.getElementById('kondisi_apel').value;
+    var formFoto = document.getElementById('form_foto');
+    var formTidakAda = document.getElementById('form_tidak_ada');
+    var formAdaLupa = document.getElementById('form_ada_lupa');
+    
+    var tabelKehadiran = document.querySelector('.data-table');
+    
+    // Dapatkan semua input yang ada di dalam form_ada_lupa
+    var inputsAdaLupa = formAdaLupa.querySelectorAll('input, select, textarea');
+    var inputsTidakAda = formTidakAda.querySelectorAll('input, select, textarea');
+    
+    // Dapatkan semua input di dalam tabel kehadiran
+    var inputsKehadiran = tabelKehadiran.querySelectorAll('select, input');
+
+    // Reset semua required
+    inputsAdaLupa.forEach(input => input.required = false);
+    inputsTidakAda.forEach(input => input.required = false);
+    inputsKehadiran.forEach(input => input.required = false);
+    document.getElementById('foto_bukti').required = false;
+
+    // Atur display awal
+    formTidakAda.style.display = 'none';
+    formAdaLupa.style.display = 'none';
+    formFoto.style.display = 'none';
+    tabelKehadiran.style.display = 'none';
+
+    if (kondisiApel === 'tidak_ada') {
+        // Apel tidak ada
+        formTidakAda.style.display = 'block';
+        document.getElementById('alasan_tidak_ada').required = true;
+    } else {
+        // Apel ada atau lupa dokumentasi
+        formAdaLupa.style.display = 'block';
+        tabelKehadiran.style.display = 'table';
         
-        // Dapatkan semua input yang ada di dalam form_ada_lupa
-        var inputsAdaLupa = formAdaLupa.querySelectorAll('input, select, textarea');
-        var inputsTidakAda = formTidakAda.querySelectorAll('input, select, textarea');
-        
-        // Dapatkan semua input di dalam tabel kehadiran
-        var inputsKehadiran = tabelKehadiran.querySelectorAll('select, input');
+        // Set input utama jadi required
+        document.getElementById('petugas').required = true;
+        document.getElementById('komando').required = true;
+        document.getElementById('pemimpin_doa').required = true;
+        document.getElementById('pembina_apel').required = true;
 
-        // Atur ulang semua properti required
-        inputsAdaLupa.forEach(input => input.required = false);
-        inputsTidakAda.forEach(input => input.required = false);
-        inputsKehadiran.forEach(input => input.required = false);
-        document.getElementById('foto_bukti').required = false; // Pastikan input foto juga direset
-
-        // Atur display untuk semua form
-        formTidakAda.style.display = 'none';
-        formAdaLupa.style.display = 'none';
-        formFoto.style.display = 'none';
-        tabelKehadiran.style.display = 'none';
-
-        if (kondisiApel === 'tidak_ada') {
-            formTidakAda.style.display = 'block';
-            document.getElementById('alasan_tidak_ada').required = true;
-        } else { // kondisi 'ada' atau 'lupa_didokumentasikan'
-            formAdaLupa.style.display = 'block';
-            tabelKehadiran.style.display = 'table';
+        if (kondisiApel === 'ada') {
+            formFoto.style.display = 'block';
+            document.getElementById('foto_bukti').required = true;
             
-            // Atur input yang relevan menjadi required untuk kedua kondisi
-            document.getElementById('petugas').required = true;
-            document.getElementById('komando').required = true;
-            document.getElementById('pemimpin_doa').required = true;
-            document.getElementById('pembina_apel').required = true;
-
-            if (kondisiApel === 'ada') {
-                formFoto.style.display = 'block';
-                document.getElementById('foto_bukti').required = true;
-                inputsKehadiran.forEach(input => {
+            // Semua kehadiran wajib diisi kecuali catatan
+            inputsKehadiran.forEach(input => {
+                if (!input.name.includes('catatan')) {
                     input.required = true;
-                });
-            }
+                }
+            });
         }
     }
+}
 
-    document.addEventListener('DOMContentLoaded', toggleFormFields);
+document.addEventListener('DOMContentLoaded', toggleFormFields);
 </script>
+
 <?php include '../includes/footer.php'; ?>

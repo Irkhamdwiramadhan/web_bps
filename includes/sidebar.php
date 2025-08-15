@@ -46,9 +46,23 @@
           <ul class="sub-menu">
             <li><a href="tambah_penjualan.php">Tambah Penjualan</a></li>
             <li><a href="barang_tersedia.php">Stok Barang</a></li>
-
             <li><a href="history_penjualan.php">History Penjualan</a></li>
+          </ul>
+        </details>
+      </li>
 
+      <!-- Pegawai Berprestasi (submenu) -->
+      <li class="has-sub">
+        <details class="prestasi-menu">
+          <summary class="nav-item">
+            <i class="fas fa-trophy"></i>
+            <span class="nav-text">Pegawai Berprestasi</span>
+            <i class="fas fa-chevron-right caret" aria-hidden="true"></i>
+          </summary>
+          <ul class="sub-menu">
+            <li><a href="calon_berprestasi.php">Daftar Calon</a></li>
+            <li><a href="form_penilaian.php">Form Penilaian</a></li>
+            <li><a href="hasil_penilaian.php">Hasil Penilaian</a></li>
           </ul>
         </details>
       </li>
@@ -88,12 +102,12 @@
 .nav-item i {width:20px; text-align:center}
 .nav-text {white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
-.kbs-mart-menu {margin:4px 8px}
-.kbs-mart-menu summary {list-style:none; cursor:pointer; user-select:none; display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:10px}
-.kbs-mart-menu summary::-webkit-details-marker {display:none}
-.kbs-mart-menu[open] summary {background:var(--sb-hover)}
-.kbs-mart-menu .caret {margin-left:auto; transition:transform .2s}
-.kbs-mart-menu[open] .caret {transform:rotate(90deg)}
+.kbs-mart-menu, .prestasi-menu {margin:4px 8px}
+.kbs-mart-menu summary, .prestasi-menu summary {list-style:none; cursor:pointer; user-select:none; display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:10px}
+.kbs-mart-menu summary::-webkit-details-marker, .prestasi-menu summary::-webkit-details-marker {display:none}
+.kbs-mart-menu[open] summary, .prestasi-menu[open] summary {background:var(--sb-hover)}
+.kbs-mart-menu .caret, .prestasi-menu .caret {margin-left:auto; transition:transform .2s}
+.kbs-mart-menu[open] .caret, .prestasi-menu[open] .caret {transform:rotate(90deg)}
 .sub-menu {list-style:none; margin:4px 0 10px 0; padding:0 0 6px 44px}
 .sub-menu a {display:block; padding:9px 10px; border-radius:8px; color:#eaeaea; text-decoration:none}
 .sub-menu a:hover {background:rgba(255,255,255,.08)}
@@ -103,7 +117,7 @@
 .sidebar.collapsed {width:var(--sbw-collapsed)}
 .sidebar.collapsed .brand, .sidebar.collapsed .nav-text {display:none}
 .sidebar.collapsed .sub-menu {padding-left:0}
-.sidebar.collapsed .kbs-mart-menu .caret {display:none}
+.sidebar.collapsed .kbs-mart-menu .caret, .sidebar.collapsed .prestasi-menu .caret {display:none}
 
 .main-content {margin-left:var(--sbw); transition:margin-left .25s ease}
 .sidebar.collapsed ~ .main-content {margin-left:var(--sbw-collapsed)}
@@ -124,7 +138,7 @@
   .menu-toggle {display:inline-flex; align-items:center; justify-content:center}
   .sidebar {left:-270px}
   .sidebar.active {left:0}
-  .sidebar.active ~ .menu-toggle {opacity:0; pointer-events:none;} /* HIDE BUTTON WHEN SIDEBAR OPEN */
+  .sidebar.active ~ .menu-toggle {opacity:0; pointer-events:none;}
   .main-content {margin-left:0 !important; padding-left:16px; padding-right:16px}
 }
 body.sidebar-open {overflow:hidden}
@@ -176,8 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const kbPages = ['tambah_penjualan.php','barang_tersedia.php','barang_promo.php','history_penjualan.php','tambah_barang.php'];
+  const prestasiPages = ['calon_berprestasi.php','form_penilaian.php','hasil_penilaian.php'];
+  
   if (kbPages.includes(path)){
     const det = document.querySelector('.kbs-mart-menu');
+    if (det) det.setAttribute('open','');
+  }
+  
+  if (prestasiPages.includes(path)){
+    const det = document.querySelector('.prestasi-menu');
     if (det) det.setAttribute('open','');
   }
 });

@@ -101,9 +101,16 @@ include '../includes/sidebar.php';
                         }
                         echo "</td>";
 
-                        echo "<td>
-                                <a href='detail_apel.php?id=" . $row['id'] . "' class='btn-action'>Detail</a>
-                              </td>";
+                       echo "<td>
+                                <a href='detail_apel.php?id={$row['id']}' class='btn-action'>Detail</a>
+                                <a href='../proses/proses_hapus_apel.php?id={$row['id']}'
+                                class='btn-action delete'
+                                onclick=\"return confirm('Apakah Anda yakin ingin menghapus data ini?');\">
+                                Hapus
+                                </a>
+                            </td>";
+
+
                         echo "</tr>";
                     }
                 } else {
