@@ -4,7 +4,30 @@ include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-// Ambil data calon pegawai untuk penilaian
+// Menyiapkan variabel untuk filter
+$filter_triwulan = isset($_GET['triwulan']) ? intval($_GET['triwulan']) : null;
+$filter_tahun = isset($_GET['tahun']) ? intval($_GET['tahun']) : null;
+
+// Mengambil data triwulan dan tahun unik dari database untuk filter
+$query_filters = "SELECT DISTINCT triwulan, tahun FROM calon_triwulan ORDER BY tahun DESC, triwulan DESC";
+$result_filters = mysqli_query($koneksi, $query_filters);
+
+$unique_years = [];
+$unique_quarters = [];
+if ($result_filters) {
+    while ($row = mysqli_fetch_assoc($result_filters)) {
+        if (!in_array($row['tahun'], $unique_years)) {
+            $unique_years[] = $row['tahun'];
+        }
+        if (!in_array($row['triwulan'], $unique_quarters)) {
+            $unique_quarters[] = $row['triwulan'];
+        }
+    }
+}
+sort($unique_quarters);
+sort($unique_years);
+
+// Query utama untuk mengambil data calon pegawai untuk penilaian
 $query_calon = "
     SELECT 
         ct.id,
@@ -14,7 +37,17 @@ $query_calon = "
         ct.tahun
     FROM calon_triwulan ct
     JOIN pegawai p ON ct.id_pegawai = p.id
-    ORDER BY p.nama ASC";
+    WHERE 1=1";
+
+// Tambahkan kondisi WHERE sesuai filter yang dipilih
+if ($filter_triwulan) {
+    $query_calon .= " AND ct.triwulan = " . $filter_triwulan;
+}
+if ($filter_tahun) {
+    $query_calon .= " AND ct.tahun = " . $filter_tahun;
+}
+
+$query_calon .= " ORDER BY p.nama ASC";
 $result_calon = mysqli_query($koneksi, $query_calon);
 
 // Ambil data pegawai untuk dropdown penilai
@@ -28,11 +61,55 @@ $box_colors = ['primary', 'info', 'success', 'warning', 'danger'];
 <div class="main-content">
     <section class="content-header">
         <h1>
-            <i class="fas fa-edit"></i> Formulir Penilaian Massal
+            <i class="fas fa-edit"></i> Formulir Penilaian Massal - Pegawai Berprestasi BPS Kabupaten Tegal
         </h1>
     </section>
 
     <section class="content">
+        <!-- Filter Form -->
+        <div class="card box box-solid">
+            <div class="box-header with-border">
+                <h3 class="box-title">Filter Penilaian</h3>
+            </div>
+            <div class="box-body">
+                <form method="GET" action="form_penilaian.php">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="triwulan">Pilih Triwulan:</label>
+                                <select name="triwulan" id="triwulan" class="form-control">
+                                    <option value="">-- Semua Triwulan --</option>
+                                    <?php foreach ($unique_quarters as $triwulan): ?>
+                                        <option value="<?= $triwulan ?>" <?= ($triwulan == $filter_triwulan) ? 'selected' : '' ?>>
+                                            Triwulan <?= $triwulan ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="tahun">Pilih Tahun:</label>
+                                <select name="tahun" id="tahun" class="form-control">
+                                    <option value="">-- Semua Tahun --</option>
+                                    <?php foreach ($unique_years as $tahun): ?>
+                                        <option value="<?= $tahun ?>" <?= ($tahun == $filter_tahun) ? 'selected' : '' ?>>
+                                            <?= $tahun ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group" style="margin-top: 25px;">
+                                <button type="submit" class="btn btn-primary btn-block">Terapkan</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-12">
                 <div class="box box-solid">
@@ -105,7 +182,7 @@ $box_colors = ['primary', 'info', 'success', 'warning', 'danger'];
                                 $counter++;
                                 }
                             } else {
-                                echo '<p class="text-center">Belum ada calon pegawai yang terdaftar untuk dinilai.</p>';
+                                echo '<p class="text-center">Tidak ada calon pegawai yang terdaftar untuk penilaian pada periode yang dipilih.</p>';
                             }
                             ?>
 

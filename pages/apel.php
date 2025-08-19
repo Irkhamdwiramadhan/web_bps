@@ -49,7 +49,7 @@ include '../includes/sidebar.php';
     </div>
 
     <div class="card">
-        <h3>Rekapitulasi Status Kehadiran</h3>
+        <h3>Rekapitulasi Status Kehadiran Apel</h3>
         <div id="kehadiran-charts-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 40px;">
             <!-- Pie charts akan dimasukkan di sini oleh JavaScript -->
         </div>

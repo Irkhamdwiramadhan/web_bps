@@ -1,9 +1,11 @@
 <?php
+// Masukkan file koneksi database dan layout utama
 include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-$sql_pegawai = "SELECT id, nama FROM pegawai";
+// Ambil data pegawai dari database untuk dropdown
+$sql_pegawai = "SELECT id, nama FROM pegawai ORDER BY nama ASC";
 $result_pegawai = $koneksi->query($sql_pegawai);
 $pegawai_list = [];
 if ($result_pegawai->num_rows > 0) {
@@ -11,6 +13,21 @@ if ($result_pegawai->num_rows > 0) {
         $pegawai_list[] = $row;
     }
 }
+
+// Daftar status kehadiran untuk radio button
+$status_options = [
+    'hadir_awal' => 'Hadir Awal',
+    'hadir' => 'Hadir',
+    'telat_1' => 'Telat 1',
+    'telat_2' => 'Telat 2',
+    'telat_3' => 'Telat 3',
+    'izin' => 'Izin',
+    'absen' => 'Absen',
+    'dinas_luar' => 'Dinas Luar',
+    'sakit' => 'Sakit',
+    'cuti' => 'Cuti',
+    'tugas' => 'Tugas',
+];
 ?>
 
 <main class="main-content">
@@ -36,16 +53,44 @@ if ($result_pegawai->num_rows > 0) {
 
             <div id="form_ada_lupa">
                 <label for="petugas">Petugas Apel:</label>
-                <input type="text" id="petugas" name="petugas">
+                <select id="petugas" name="petugas" class="form-control">
+                    <option value="">-- Pilih Petugas --</option>
+                    <?php foreach ($pegawai_list as $pegawai): ?>
+                        <option value="<?= htmlspecialchars($pegawai['nama']) ?>">
+                            <?= htmlspecialchars($pegawai['nama']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
                 
                 <label for="komando">Komando:</label>
-                <input type="text" id="komando" name="komando">
+                <select id="komando" name="komando" class="form-control">
+                    <option value="">-- Pilih Komando --</option>
+                    <?php foreach ($pegawai_list as $pegawai): ?>
+                        <option value="<?= htmlspecialchars($pegawai['nama']) ?>">
+                            <?= htmlspecialchars($pegawai['nama']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
                 
                 <label for="pemimpin_doa">Pemimpin Doa:</label>
-                <input type="text" id="pemimpin_doa" name="pemimpin_doa">
+                <select id="pemimpin_doa" name="pemimpin_doa" class="form-control">
+                    <option value="">-- Pilih Pemimpin Doa --</option>
+                    <?php foreach ($pegawai_list as $pegawai): ?>
+                        <option value="<?= htmlspecialchars($pegawai['nama']) ?>">
+                            <?= htmlspecialchars($pegawai['nama']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
                 
                 <label for="pembina_apel">Pembina Apel:</label>
-                <input type="text" id="pembina_apel" name="pembina_apel">
+                <select id="pembina_apel" name="pembina_apel" class="form-control">
+                    <option value="">-- Pilih Pembina Apel --</option>
+                    <?php foreach ($pegawai_list as $pegawai): ?>
+                        <option value="<?= htmlspecialchars($pegawai['nama']) ?>">
+                            <?= htmlspecialchars($pegawai['nama']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
                 
                 <label for="keterangan">Catatan Umum:</label>
                 <textarea id="keterangan" name="keterangan" rows="4"></textarea>
@@ -56,40 +101,42 @@ if ($result_pegawai->num_rows > 0) {
                 </div>
                 
                 <h3>Status Kehadiran Pegawai</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Nama Pegawai</th>
-                            <th>Status Kehadiran</th>
-                            <th>Catatan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($pegawai_list as $pegawai): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($pegawai['nama']); ?></td>
-                            <td>
-                                <select name="kehadiran[<?php echo $pegawai['id']; ?>][status]">
-                                    <option value="hadir_awal">Hadir Awal</option>
-                                    <option value="hadir">Hadir</option>
-                                    <option value="telat_1">Telat 1</option>
-                                    <option value="telat_2">Telat 2</option>
-                                    <option value="telat_3">Telat 3</option>
-                                    <option value="izin">Izin</option>
-                                    <option value="absen">Absen</option>
-                                    <option value="dinas_luar">Dinas Luar</option>
-                                    <option value="sakit">Sakit</option>
-                                    <option value="cuti">Cuti</option>
-                                    <option value="tugas">Tugas</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" name="kehadiran[<?php echo $pegawai['id']; ?>][catatan]" placeholder="Tambahkan catatan jika perlu">
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nama Pegawai</th>
+                                <th>Status Kehadiran</th>
+                                <th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($pegawai_list as $pegawai): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($pegawai['nama']); ?></td>
+                                <td>
+                                    <div class="status-options">
+                                        <?php foreach ($status_options as $value => $label): ?>
+                                            <input type="radio" 
+                                                   id="status-<?= $pegawai['id'] ?>-<?= $value ?>" 
+                                                   name="kehadiran[<?= $pegawai['id'] ?>][status]" 
+                                                   value="<?= $value ?>"
+                                                   class="status-radio"
+                                                   required>
+                                            <label for="status-<?= $pegawai['id'] ?>-<?= $value ?>" class="status-label">
+                                                <?= $label ?>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="text" name="kehadiran[<?= $pegawai['id'] ?>][catatan]" placeholder="Tambahkan catatan jika perlu">
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             
             <br>
@@ -97,6 +144,45 @@ if ($result_pegawai->num_rows > 0) {
         </form>
     </div>
 </main>
+
+<style>
+/* Styling untuk radio button status kehadiran */
+.data-table-container {
+    overflow-x: auto;
+}
+.status-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.status-radio {
+    display: none; /* Sembunyikan radio button asli */
+}
+.status-label {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background-color 0.2s, color 0.2s;
+}
+.status-radio:checked + .status-label {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+.status-label:hover {
+    background-color: #e9e9e9;
+}
+.status-radio:checked + .status-label:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+</style>
 
 <script>
 function toggleFormFields() {
@@ -107,17 +193,16 @@ function toggleFormFields() {
     
     var tabelKehadiran = document.querySelector('.data-table');
     
-    // Dapatkan semua input yang ada di dalam form_ada_lupa
-    var inputsAdaLupa = formAdaLupa.querySelectorAll('input, select, textarea');
+    var inputsAdaLupa = formAdaLupa.querySelectorAll('input:not(.status-radio), select, textarea');
     var inputsTidakAda = formTidakAda.querySelectorAll('input, select, textarea');
     
-    // Dapatkan semua input di dalam tabel kehadiran
-    var inputsKehadiran = tabelKehadiran.querySelectorAll('select, input');
+    // Dapatkan semua radio button status kehadiran
+    var statusRadioButtons = tabelKehadiran.querySelectorAll('.status-radio');
 
     // Reset semua required
     inputsAdaLupa.forEach(input => input.required = false);
     inputsTidakAda.forEach(input => input.required = false);
-    inputsKehadiran.forEach(input => input.required = false);
+    statusRadioButtons.forEach(input => input.required = false);
     document.getElementById('foto_bukti').required = false;
 
     // Atur display awal
@@ -145,11 +230,9 @@ function toggleFormFields() {
             formFoto.style.display = 'block';
             document.getElementById('foto_bukti').required = true;
             
-            // Semua kehadiran wajib diisi kecuali catatan
-            inputsKehadiran.forEach(input => {
-                if (!input.name.includes('catatan')) {
-                    input.required = true;
-                }
+            // Semua radio status kehadiran wajib diisi
+            statusRadioButtons.forEach(input => {
+                input.required = true;
             });
         }
     }
