@@ -1,8 +1,12 @@
 <?php
 // Masukkan file koneksi database dan layout utama
+session_start();
 include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
+
+// Ambil role pengguna dari sesi. Jika tidak ada, atur sebagai string kosong.
+$user_role = $_SESSION['user_role'] ?? '';
 
 // Menyiapkan variabel untuk filter
 $filter_category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : null;
@@ -52,7 +56,9 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
 <main class="main-content">
     <div class="header-content">
         <h2>Stok Barang</h2>
-        <a href="tambah_barang.php" class="btn btn-primary">Tambah Barang Baru</a>
+        <?php if ($user_role === 'admin_kb-s' || $user_role === 'super_admin'): ?>
+            <a href="tambah_barang.php" class="btn btn-primary">Tambah Barang Baru</a>
+        <?php endif; ?>
     </div>
 
     <div class="content-wrapper">
@@ -86,7 +92,6 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
                 ?>
             </ul>
         </aside>
-
         <div class="stok-barang-page">
             <div class="product-grid">
                 <?php
@@ -94,36 +99,36 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
                     while($row = $result_products->fetch_assoc()) {
                         $image_filename = htmlspecialchars($row['image']);
                         $final_image_path = "../assets/img/produk/" . $image_filename;
-                        
                         // Fallback image jika file tidak ditemukan
-                        if (empty($image_filename) || !file_exists($final_image_path)) {
-                            $final_image_path = "https://placehold.co/200x150/EEEEEE/333333?text=Image+Not+Found";
+                        if (empty($row['image']) || !file_exists($final_image_path)) {
+                             $final_image_path = "https://placehold.co/250x250/E0E0E0/888888?text=No+Image";
                         }
-                        ?>
-                        <div class="product-card">
-                            <div class="product-image-wrapper">
-                                <img src="<?php echo $final_image_path; ?>" alt="<?php echo htmlspecialchars($row['name']); ?>" class="product-image">
-                            </div>
-                            <div class="product-info">
-                                <h5><?php echo htmlspecialchars($row['name']); ?></h5>
-                                <p class="category-text">Kategori: <?php echo htmlspecialchars($row['category_name']); ?></p>
-                                <div class="price-section">
-                                    <?php if ($row['is_promo'] && $row['promo_price'] !== null) { ?>
-                                        <span class="original-price">Rp <?php echo number_format($row['price'], 0, ',', '.'); ?></span>
-                                        <span class="promo-price">Rp <?php echo number_format($row['promo_price'], 0, ',', '.'); ?></span>
-                                    <?php } else { ?>
-                                        <span class="normal-price">Rp <?php echo number_format($row['price'], 0, ',', '.'); ?></span>
-                                    <?php } ?>
-                                </div>
-                                <p class="stock-text">Stok: <?php echo htmlspecialchars($row['stock']); ?></p>
-                                <p>Status: <?php echo ($row['is_promo'] ? '<span class="badge badge-warning">Promo</span>' : '<span class="badge badge-normal">Normal</span>'); ?></p>
-                            </div>
-                            <div class="product-actions">
-                                <a href="edit_barang.php?id=<?php echo $row['id']; ?>" class="btn-action edit">Edit</a>
-                                <a href="#" class="btn-action delete" data-bs-toggle="modal" data-bs-target="#deleteModal" data-id="<?php echo $row['id']; ?>">Hapus</a>
-                            </div>
-                        </div>
-                        <?php
+                        
+                ?>
+                <div class="product-card">
+                    <img src="<?php echo $final_image_path; ?>" alt="<?php echo htmlspecialchars($row['name']); ?>" class="product-image">
+                    <div class="product-info">
+                        <span class="product-category"><?php echo htmlspecialchars($row['category_name']); ?></span>
+                        <h4 class="product-name"><?php echo htmlspecialchars($row['name']); ?></h4>
+                        <p class="product-price">
+                            <?php if ($row['is_promo']) { ?>
+                                <span class="original-price">Rp <?php echo number_format($row['price'], 0, ',', '.'); ?></span>
+                                <span class="promo-price">Rp <?php echo number_format($row['promo_price'], 0, ',', '.'); ?></span>
+                            <?php } else { ?>
+                                Rp <?php echo number_format($row['price'], 0, ',', '.'); ?>
+                            <?php } ?>
+                        </p>
+                        <p>Stok: <?php echo htmlspecialchars($row['stock']); ?></p>
+                        <p>Status: <?php echo ($row['is_promo'] ? '<span class="badge bg-warning text-dark">Promo</span>' : '<span class="badge bg-success text-white">Normal</span>'); ?></p>
+                    </div>
+                    <?php if ($user_role === 'admin_kb-s' || $user_role === 'super_admin'): ?>
+                    <div class="product-actions">
+                        <a href="../proses/proses_edit_barang.php?id=<?php echo $row['id']; ?>" class="btn-action edit">Edit</a>
+                        <button type="button" class="btn-action delete-btn" data-id="<?php echo $row['id']; ?>">Hapus</button>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php
                     }
                 } else {
                     echo "<p style='text-align:center; width:100%;'>Tidak ada data barang.</p>";
@@ -134,262 +139,412 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
     </div>
 </main>
 
-<!-- Delete Modal -->
-<div class="modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="deleteModalLabel">Konfirmasi Hapus</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
       <div class="modal-body">
-        Apakah Anda yakin ingin menghapus barang ini?
+        Apakah Anda yakin ingin menghapus data barang ini?
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
         <a href="#" id="confirmDeleteButton" class="btn btn-danger">Hapus</a>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     // Script untuk menangani modal hapus
-    document.addEventListener('DOMContentLoaded', function () {
-        const deleteModal = document.getElementById('deleteModal');
-        // Pastikan modal ada sebelum menambahkan event listener
-        if (deleteModal) {
-            deleteModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget;
-                const productId = button.getAttribute('data-id');
-                const confirmDeleteButton = deleteModal.querySelector('#confirmDeleteButton');
-                confirmDeleteButton.href = '../proses/proses_hapus_barang.php?id=' + productId;
-            });
+    $(document).ready(function() {
+        const deleteModal = $('#deleteModal');
+        const confirmDeleteButton = $('#confirmDeleteButton');
+
+        // Fungsi untuk menampilkan modal
+        function showModal() {
+            deleteModal.css('display', 'block');
+            setTimeout(function() {
+                deleteModal.addClass('show');
+            }, 10);
         }
+
+        // Fungsi untuk menyembunyikan modal
+        function hideModal() {
+            deleteModal.removeClass('show');
+            setTimeout(function() {
+                deleteModal.css('display', 'none');
+            }, 300);
+        }
+
+        // Tangani klik pada tombol 'Hapus'
+        $(document).on('click', '.delete-btn', function() {
+            const productId = $(this).data('id');
+            const deleteUrl = '../proses/proses_hapus_barang.php?id=' + productId;
+            confirmDeleteButton.attr('href', deleteUrl);
+            showModal();
+        });
+
+        // Tangani klik pada tombol Batal atau tombol tutup 'x'
+        $(document).on('click', '[data-dismiss="modal"]', function() {
+            hideModal();
+        });
+
+        // Tangani klik di luar modal
+        $(window).on('click', function(event) {
+            if ($(event.target).is(deleteModal)) {
+                hideModal();
+            }
+        });
     });
 </script>
 
 <style>
-    /* CSS Khusus untuk halaman Stok Barang */
+/* Main Content and Container Styling */
+.main-content {
+    padding: 2rem;
+    background-color: #f4f6f9;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-content h2 {
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.content-wrapper {
+    display: flex;
+    gap: 20px;
+}
+
+.category-sidebar {
+    width: 250px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    height: fit-content;
+}
+
+.category-sidebar h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.category-item {
+    margin-bottom: 5px;
+}
+
+.category-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.category-link:hover, .category-link.active {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.category-count {
+    background-color: #e9ecef;
+    color: #007bff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.category-link.active .category-count {
+    background-color: #fff;
+    color: #007bff;
+}
+
+.stok-barang-page {
+    flex-grow: 1;
+}
+
+/* Product Grid Styling */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.product-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+.product-image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.product-info {
+    flex-grow: 1;
+    text-align: left;
+}
+
+.product-category {
+    font-size: 0.8rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.product-name {
+    margin: 5px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.product-price {
+    margin: 5px 0 10px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #212529;
+}
+
+.product-price .original-price {
+    text-decoration: line-through;
+    color: #888;
+    font-weight: normal;
+    font-size: 0.9em;
+    margin-right: 5px;
+}
+
+/* Badge Styling (Ditambahkan dari kode asli Anda) */
+.badge {
+    display: inline-block;
+    padding: .35em .65em;
+    font-size: .75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
+}
+.bg-warning {
+    background-color: #ffc107;
+}
+.bg-success {
+    background-color: #28a745;
+}
+.text-dark {
+    color: #212529 !important;
+}
+.text-white {
+    color: #fff !important;
+}
+
+
+.product-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-action {
+    display: inline-block;
+    padding: 8px 15px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 500;
+    text-align: center;
+    transition: background-color 0.3s ease;
+    border: none;
+}
+
+.btn-action.edit {
+    background-color: #17a2b8;
+}
+
+.btn-action.edit:hover {
+    background-color: #138496;
+}
+
+.btn-action.delete-btn {
+    background-color: #dc3545;
+    cursor: pointer;
+}
+
+.btn-action.delete-btn:hover {
+    background-color: #c82333;
+}
+
+/* Modal Styling */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    outline: 0;
+    background-color: rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.show {
+    display: block;
+    opacity: 1;
+}
+
+.modal-dialog {
+    position: relative;
+    width: auto;
+    margin: 1.75rem auto;
+    transform: translate(0, -50px);
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: none;
+}
+
+.modal-dialog-centered {
+    display: flex;
+    align-items: center;
+    min-height: calc(100% - 3.5rem);
+}
+
+.modal-content {
+    position: relative;
+    background-color: #fff;
+    border: 1px solid rgba(0,0,0,.2);
+    border-radius: 12px;
+    outline: 0;
+    width: 90%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-body {
+    position: relative;
+    flex: 1 1 auto;
+    padding: 1rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.close {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    cursor: pointer;
+    background-color: transparent;
+    border: 0;
+}
+
+
+/* Media Queries for Responsiveness */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 10px;
+    }
+
+    .header-content h2 {
+        font-size: 1.5rem;
+    }
+
     .content-wrapper {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
+        flex-direction: column;
+        gap: 15px;
     }
 
     .category-sidebar {
-        flex: 0 0 250px;
-        padding: 20px;
-        background-color: #fff;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        height: fit-content;
-    }
-
-    .category-sidebar h4 {
-        margin-top: 0;
-        margin-bottom: 20px;
-        color: #333;
-        font-weight: 600;
-        border-bottom: 2px solid #e0e0e0;
-        padding-bottom: 10px;
-    }
-
-    .category-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .category-item {
-        margin-bottom: 5px;
-    }
-
-    .category-link {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 15px;
-        border-radius: 8px;
-        color: #555;
-        text-decoration: none;
-        transition: background-color 0.2s ease, color 0.2s ease;
-    }
-
-    .category-link:hover,
-    .category-link.active {
-        background-color: #007bff;
-        color: #fff;
-    }
-
-    .category-count {
-        background-color: #e9ecef;
-        color: #495057;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        transition: background-color 0.2s ease, color 0.2s ease;
-    }
-
-    .category-link.active .category-count {
-        background-color: #fff;
-        color: #007bff;
+        width: 100%;
+        padding: 15px;
+        order: 1; /* Pindahkan sidebar ke atas */
     }
 
     .stok-barang-page {
-        flex: 1;
+        order: 2; /* Pindahkan halaman stok ke bawah */
     }
 
-    /* Product Grid */
     .product-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 25px;
-    }
-
-    /* Product Card */
-    .product-card {
-        background-color: #fff;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .product-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    }
-
-    .product-image-wrapper {
-        width: 100%;
-        height: 200px;
-        overflow: hidden;
-        border-bottom: 1px solid #e0e0e0;
-    }
-    
-    .product-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.3s ease;
-    }
-
-    .product-card:hover .product-image {
-        transform: scale(1.1);
-    }
-    
-    .product-info {
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-    }
-    
-    .product-info h5 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .product-info p {
-        margin: 0 0 8px 0;
-        font-size: 0.9rem;
-        color: #666;
-    }
-    
-    .price-section {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-    
-    .original-price {
-        color: #888;
-        text-decoration: line-through;
-        margin-right: 10px;
-    }
-
-    .promo-price {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #dc3545;
-    }
-    
-    .normal-price {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #28a745;
-    }
-    
-    .badge {
-        display: inline-block;
-        padding: .35em .65em;
-        font-size: .75em;
-        font-weight: 700;
-        line-height: 1;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: .25rem;
-    }
-    .badge-warning {
-        color: #212529;
-        background-color: #ffc107;
-    }
-    .badge-normal {
-        color: #fff;
-        background-color: #28a745;
-    }
-    
-    .product-actions {
-        padding: 10px 20px 20px;
-        display: flex;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 10px;
+        padding: 10px;
     }
 
-    /* Action buttons */
-    .btn-action.edit {
-        background-color: #17a2b8;
-        color: #fff;
+    .product-card {
+        padding: 10px;
     }
 
-    .btn-action.delete {
-        background-color: #dc3545;
-        color: #fff;
+    .product-name {
+        font-size: 1rem;
     }
-
-    /* Modal Styling */
-    .modal-content {
-        border-radius: 12px;
-        border: none;
-    }
-    .modal-header {
-        border-bottom: 1px solid #e9ecef;
-    }
-    .modal-footer {
-        border-top: 1px solid #e9ecef;
-    }
-    
-    /* Media Queries for Responsiveness */
-    @media (max-width: 992px) {
-        .content-wrapper {
-            flex-direction: column;
-        }
-        .category-sidebar {
-            flex: 1;
-            margin-bottom: 20px;
-            box-shadow: none;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .product-grid {
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        }
-    }
+}
 </style>
-
-<?php include '../includes/footer.php'; ?>

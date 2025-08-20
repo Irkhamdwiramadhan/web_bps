@@ -1,12 +1,18 @@
 <?php
+session_start();
 include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
+// Ambil role pengguna dari sesi untuk validasi hak akses
+$user_role = $_SESSION['user_role'] ?? '';
+// Tentukan apakah pengguna memiliki hak untuk mengelola (menambah dan menghapus)
+$can_manage = ($user_role === 'admin_prestasi' || $user_role === 'super_admin');
+
 $current_year = date('Y');
 $current_triwulan = ceil(date('n') / 3);
 
-$filter_triwulan = isset($_GET['triwulan']) ? $_GET['triwulan'] : strval($current_triwulan);
+$filter_triwulan = isset($_GET['triwulan']) ? htmlspecialchars($_GET['triwulan']) : strval($current_triwulan);
 $filter_tahun = isset($_GET['tahun']) ? intval($_GET['tahun']) : $current_year;
 
 // Query untuk mengambil data calon, termasuk path foto
@@ -29,110 +35,45 @@ $stmt->execute();
 $result_calon = $stmt->get_result();
 
 ?>
-<style>
-    .card-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: flex-start;
-    }
-    .calon-card {
-        background-color: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        text-align: center;
-        width: 250px;
-        transition: transform 0.2s ease-in-out;
-    }
-    .calon-card:hover {
-        transform: translateY(-5px);
-    }
-    .calon-foto {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-bottom: 15px;
-        border: 4px solid #007bff;
-    }
-    .card-info h4 {
-        margin: 0 0 5px 0;
-        color: #333;
-    }
-    .card-info p {
-        margin: 0 0 15px 0;
-        color: #666;
-        font-size: 14px;
-    }
-    .card-actions .btn {
-        width: 100%;
-    }
-</style>
+<main class="main-content">
+    <div class="header-content">
+        <h2>Daftar Calon Pegawai Berprestasi</h2>
+        <?php if ($can_manage) : ?>
+            <a href="tambah_calon_berprestasi.php" class="btn btn-primary">Tambah Calon</a>
+        <?php endif; ?>
+    </div>
 
-<div class="main-content">
-    <section class="content-header">
-        <h1>
-            <i class="fas fa-trophy"></i> Calon Pegawai Berprestasi
-        </h1>
+    <section class="filter-section">
+        <form action="" method="get" class="filter-form">
+            <div class="form-group">
+                <label for="triwulan">Triwulan:</label>
+                <select name="triwulan" id="triwulan" class="form-control">
+                    <option value="1" <?= $filter_triwulan == 1 ? 'selected' : '' ?>>1</option>
+                    <option value="2" <?= $filter_triwulan == 2 ? 'selected' : '' ?>>2</option>
+                    <option value="3" <?= $filter_triwulan == 3 ? 'selected' : '' ?>>3</option>
+                    <option value="4" <?= $filter_triwulan == 4 ? 'selected' : '' ?>>4</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tahun">Tahun:</label>
+                <input type="number" name="tahun" id="tahun" class="form-control" value="<?= $filter_tahun ?>" min="2020" max="<?= date('Y') + 1 ?>">
+            </div>
+            <button type="submit" class="btn btn-primary">Tampilkan</button>
+        </form>
     </section>
 
-    <section class="content">
-        <div class="box box-primary">
-            <div class="box-header with-border">
-                <h3 class="box-title">Daftar Calon</h3>
+    <section class="calon-list-section">
+        <div class="card">
+            <div class="card-header">
+                <h3>Calon Triwulan <?= htmlspecialchars($filter_triwulan) ?> Tahun <?= htmlspecialchars($filter_tahun) ?></h3>
             </div>
-            <div class="box-body">
-                <div class="form-group">
-                    <a href="tambah_calon_berprestasi.php" class="btn btn-primary mb-3">
-                        <i class="fa fa-plus"></i> Tambah Calon
-                    </a>
-                </div>
-
-                <hr>
-
-                <!-- Filter Form -->
-                <form class="form-inline mb-4" method="GET" action="">
-                    <div class="form-group">
-                        <label for="tahun">Tahun:</label>
-                        <select name="tahun" id="tahun" class="form-control">
-                            <?php for ($y = 2020; $y <= 2030; $y++): ?>
-                                <option value="<?= $y ?>" <?= $y == $filter_tahun ? 'selected' : '' ?>><?= $y ?></option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="triwulan">Triwulan:</label>
-                        <select name="triwulan" id="triwulan" class="form-control">
-                            <?php for ($t = 1; $t <= 4; $t++): ?>
-                                <option value="<?= $t ?>" <?= $t == $filter_triwulan ? 'selected' : '' ?>><?= $t ?></option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-info">Filter</button>
-                </form>
-
-                <?php
-                if (isset($_GET['status']) && $_GET['status'] == 'success') {
-                    echo '<div class="alert alert-success alert-dismissible">Data calon berhasil ditambahkan!</div>';
-                }
-                if (isset($_GET['status']) && $_GET['status'] == 'success_delete') {
-                    echo '<div class="alert alert-warning alert-dismissible">Data calon berhasil dihapus!</div>';
-                }
-                if (isset($_GET['status']) && $_GET['status'] == 'error') {
-                    $message = isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'Terjadi kesalahan.';
-                    echo '<div class="alert alert-danger alert-dismissible">Error: ' . $message . '</div>';
-                }
-                ?>
-                
-                <div class="card-container">
-                    <?php 
-                    if ($result_calon->num_rows > 0): 
-                        while ($row = $result_calon->fetch_assoc()):
-                            // Menggabungkan path direktori dengan nama file foto dari database
-                            $foto_path = '../assets/img/pegawai/' . $row['foto'];
-                            // Menggunakan placeholder jika path foto kosong atau file tidak ditemukan
-                            $image_src = (!empty($row['foto']) && file_exists($foto_path)) ? htmlspecialchars($foto_path) : 'https://placehold.co/120x120/E0E0E0/333333?text=No+Foto';
+            <div class="card-body">
+                <div class="calon-container">
+                    <?php if ($result_calon->num_rows > 0) :
+                        while ($row = $result_calon->fetch_assoc()) :
+                            $image_src = empty($row['foto']) || !file_exists("../assets/img/pegawai/{$row['foto']}")
+                                ? 'https://placehold.co/200x200/E0E0E0/888888?text=No+Foto'
+                                : "../assets/img/pegawai/{$row['foto']}";
                     ?>
                     <div class="calon-card">
                         <img src="<?= $image_src ?>" alt="Foto <?= htmlspecialchars($row['nama']) ?>" class="calon-foto">
@@ -141,6 +82,7 @@ $result_calon = $stmt->get_result();
                             <p>Jabatan: <?= htmlspecialchars($row['jabatan']) ?></p>
                             <p>NIP: <?= htmlspecialchars($row['nip']) ?></p>
                         </div>
+                        <?php if ($can_manage) : ?>
                         <div class="card-actions">
                             <a href="../proses/proses_hapus_calon.php?id=<?= $row['id'] ?>&triwulan=<?= $filter_triwulan ?>&tahun=<?= $filter_tahun ?>" 
                                class="btn btn-danger btn-sm"
@@ -148,21 +90,215 @@ $result_calon = $stmt->get_result();
                                 <i class="fa fa-trash"></i> Hapus
                             </a>
                         </div>
+                        <?php endif; ?>
                     </div>
                     <?php 
                         endwhile; 
                     else: 
                     ?>
-                    <p class="text-center" style="width: 100%;">Tidak ada calon untuk triwulan ini.</p>
+                    <p class="text-center no-data">Tidak ada calon untuk triwulan ini.</p>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
     </section>
-</div>
+</main>
 
 <?php 
 include '../includes/footer.php'; 
 $stmt->close();
 mysqli_close($koneksi);
 ?>
+<style>
+    body {
+        background-color: #f4f6f9;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .main-content {
+        padding: 2rem;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .header-content h2 {
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
+
+    /* Section Styling */
+    .filter-section, .calon-list-section {
+        margin-bottom: 25px;
+    }
+
+    /* Card Styling */
+    .card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        padding: 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #333;
+    }
+
+    .card-body {
+        padding: 20px;
+    }
+
+    /* Filter Form */
+    .filter-form {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 5px;
+    }
+
+    .form-control {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        transition: border-color 0.2s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #007bff;
+        outline: none;
+    }
+
+    /* Calon Grid */
+    .calon-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 25px;
+        justify-content: flex-start;
+    }
+    
+    .calon-card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        text-align: center;
+        padding-bottom: 15px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .calon-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .calon-foto {
+        width: 100%;
+        height: 200px; /* Atur tinggi foto agar seragam */
+        object-fit: cover;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 10px;
+    }
+
+    .card-info {
+        padding: 0 15px;
+        text-align: center;
+    }
+
+    .card-info h4 {
+        margin-top: 0;
+        margin-bottom: 5px;
+        font-size: 1.1rem;
+        color: #333;
+    }
+    
+    .card-info p {
+        margin: 3px 0;
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .card-actions {
+        margin-top: 15px;
+        padding: 0 15px;
+    }
+    
+    .no-data {
+        color: #888;
+        font-style: italic;
+    }
+
+    /* Button Styling */
+    .btn {
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background-color 0.2s ease;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+        color: #fff;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .btn-sm {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+    
+    .fa-trash {
+        margin-right: 5px;
+    }
+
+    /* Responsiveness */
+    @media (max-width: 768px) {
+        .main-content {
+            padding: 15px;
+        }
+
+        .filter-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>

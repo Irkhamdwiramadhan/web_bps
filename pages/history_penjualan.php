@@ -1,7 +1,16 @@
 <?php
+// Set zona waktu ke Asia/Jakarta (WIB)
+date_default_timezone_set('Asia/Jakarta');
+
+session_start();
 include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
+
+// Ambil role pengguna dari sesi untuk validasi hak akses
+$user_role = $_SESSION['user_role'] ?? '';
+// Tentukan apakah pengguna memiliki hak untuk mengelola (menghapus)
+$can_manage = ($user_role === 'super_admin' || $user_role === 'admin_kb-s');
 
 // Ambil keyword pencarian jika ada
 $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
@@ -16,18 +25,29 @@ $sql_sales_history = "
     JOIN pegawai p ON s.pegawai_id = p.id
 ";
 
-// Tambahkan filter pencarian
+// Tambahkan filter pencarian dengan prepared statement untuk keamanan
+$where_clause = '';
+$params = [];
+$types = '';
+
 if ($keyword !== '') {
-    $keyword_safe = $koneksi->real_escape_string($keyword);
-    $sql_sales_history .= " 
-        WHERE s.id LIKE '%$keyword_safe%'
-        OR p.nama LIKE '%$keyword_safe%'
-        OR s.date LIKE '%$keyword_safe%'
-    ";
+    $where_clause = " WHERE s.id LIKE ? OR p.nama LIKE ? OR s.date LIKE ?";
+    $params = ["%$keyword%", "%$keyword%", "%$keyword%"];
+    $types = "sss";
 }
 
-$sql_sales_history .= " ORDER BY s.date DESC";
-$result_sales_history = $koneksi->query($sql_sales_history);
+$sql_sales_history .= $where_clause . " ORDER BY s.date DESC";
+
+$stmt_sales = $koneksi->prepare($sql_sales_history);
+if ($stmt_sales) {
+    if ($keyword !== '') {
+        $stmt_sales->bind_param($types, ...$params);
+    }
+    $stmt_sales->execute();
+    $result_sales_history = $stmt_sales->get_result();
+} else {
+    $result_sales_history = false;
+}
 ?>
 
 <main class="main-content">
@@ -35,7 +55,6 @@ $result_sales_history = $koneksi->query($sql_sales_history);
         <h2>Riwayat Penjualan</h2>
     </div>
     
-    <!-- Form Pencarian -->
     <div class="card search-card">
         <form method="get" action="" class="search-form">
             <input type="text" name="keyword" placeholder="Cari ID, Nama Pegawai, atau Tanggal..."
@@ -77,8 +96,10 @@ $result_sales_history = $koneksi->query($sql_sales_history);
                         echo "<td>Rp " . number_format($row['total'], 0, ',', '.') . "</td>";
                         echo "<td>";
                         echo "<a href='detail_penjualan.php?id=" . $row['id'] . "' class='btn-action'>Detail</a>";
-                        // Ganti onclick dengan data-id untuk modal
-                        echo "<button type='button' class='btn-action delete-btn' data-id='" . $row['id'] . "'>Hapus</button>";
+                        // Tampilkan tombol hapus hanya jika pengguna memiliki hak akses
+                        if ($can_manage) {
+                            echo "<button type='button' class='btn-action delete-btn' data-id='" . $row['id'] . "'>Hapus</button>";
+                        }
                         echo "</td>";
                         echo "</tr>";
                     }
@@ -91,7 +112,6 @@ $result_sales_history = $koneksi->query($sql_sales_history);
     </div>
 </main>
 
-<!-- Custom Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -102,10 +122,10 @@ $result_sales_history = $koneksi->query($sql_sales_history);
                 </button>
             </div>
             <div class="modal-body">
-                Apakah Anda yakin ingin menghapus data penjualan ini?
+                Apakah Anda yakin ingin menghapus data penjualan ini? Tindakan ini tidak dapat dibatalkan.
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-secondary close-btn" data-dismiss="modal">Batal</button>
                 <a href="#" id="confirmDeleteButton" class="btn btn-danger">Hapus</a>
             </div>
         </div>
@@ -114,28 +134,53 @@ $result_sales_history = $koneksi->query($sql_sales_history);
 
 <?php include '../includes/footer.php'; ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script>
-$(document).ready(function() {
-    // Tangani klik pada tombol 'Hapus'
-    $(document).on('click', '.delete-btn', function() {
-        const penjualanId = $(this).data('id');
-        const deleteUrl = '../proses/proses_hapus_penjualan.php?id=' + penjualanId;
-        
-        // Atur URL hapus pada tombol di modal
-        $('#confirmDeleteButton').attr('href', deleteUrl);
-        
-        // Tampilkan modal
-        $('#deleteModal').modal('show');
+    $(document).ready(function() {
+        // Tangani klik pada tombol 'Hapus'
+        $(document).on('click', '.delete-btn', function() {
+            const penjualanId = $(this).data('id');
+            const deleteUrl = '../proses/proses_hapus_penjualan.php?id=' + penjualanId;
+            
+            // Atur URL hapus pada tombol di modal
+            $('#confirmDeleteButton').attr('href', deleteUrl);
+            
+            // Tampilkan modal dengan menambahkan kelas 'show'
+            $('#deleteModal').addClass('show');
+        });
+
+        // Tangani klik tombol 'Batal' atau 'x' untuk menutup modal
+        $(document).on('click', '.close, .close-btn', function() {
+            $('#deleteModal').removeClass('show');
+        });
+
+        // Tangani klik di luar modal untuk menutupnya
+        $(window).on('click', function(event) {
+            if ($(event.target).is('#deleteModal')) {
+                $('#deleteModal').removeClass('show');
+            }
+        });
     });
-});
 </script>
 <style>
-/* Main Content and Container Styling */
-.main-content {
-    padding: 2rem;
+/* Reset dan dasar */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f4f6f9;
+    color: #495057;
 }
 
+/* Tata letak utama */
+.wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex-grow: 1;
+    padding: 20px;
+}
+
+/* Header konten */
 .header-content {
     display: flex;
     justify-content: space-between;
@@ -149,7 +194,7 @@ $(document).ready(function() {
     margin: 0;
 }
 
-/* Card Styling */
+/* Kartu */
 .card {
     background: #fff;
     padding: 20px;
@@ -175,7 +220,7 @@ $(document).ready(function() {
     border-radius: 8px;
 }
 
-/* Table Styling */
+/* Tabel */
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -200,7 +245,32 @@ $(document).ready(function() {
     background-color: #f8f9fa;
 }
 
-/* Action Buttons */
+/* Tombol Aksi */
+.btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
 .btn-action {
     display: inline-block;
     padding: 8px 12px;
@@ -211,13 +281,12 @@ $(document).ready(function() {
     text-align: center;
     transition: background-color 0.3s ease;
     margin-right: 5px;
-    /* Perbaikan untuk membuat tombol Detail terlihat */
-    background-color: #007bff; /* Menambahkan warna latar belakang biru */
-    border: 1px solid #007bff; /* Menambahkan border */
+    background-color: #007bff;
+    border: 1px solid #007bff;
 }
 
 .btn-action:hover {
-    background-color: #0056b3; /* Warna hover yang lebih gelap */
+    background-color: #0056b3;
     border-color: #0056b3;
 }
 
@@ -231,7 +300,25 @@ $(document).ready(function() {
     background-color: #c82333;
 }
 
-/* Modal Styling */
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Modal */
 .modal {
     display: none;
     position: fixed;
@@ -243,17 +330,33 @@ $(document).ready(function() {
     overflow: hidden;
     outline: 0;
     background-color: rgba(0,0,0,0.5);
+    transition: opacity 0.3s ease;
+    opacity: 0;
 }
+
+.modal.show {
+    display: block;
+    opacity: 1;
+}
+
 .modal-dialog {
     position: relative;
     width: auto;
     margin: 1.75rem auto;
+    transform: translate(0, -50px);
+    transition: transform 0.3s ease-out;
 }
+
+.modal.show .modal-dialog {
+    transform: none;
+}
+
 .modal-dialog-centered {
     display: flex;
     align-items: center;
     min-height: calc(100% - 3.5rem);
 }
+
 .modal-content {
     position: relative;
     background-color: #fff;
@@ -264,6 +367,7 @@ $(document).ready(function() {
     max-width: 500px;
     margin: 0 auto;
 }
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -271,18 +375,29 @@ $(document).ready(function() {
     padding: 1rem;
     border-bottom: 1px solid #e9ecef;
 }
+
 .modal-body {
     position: relative;
     flex: 1 1 auto;
     padding: 1rem;
 }
+
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     padding: 1rem;
     border-top: 1px solid #e9ecef;
 }
+
 .close {
     font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    cursor: pointer;
+    background-color: transparent;
+    border: 0;
 }
 </style>

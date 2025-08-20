@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_username'] = $user['username'];
                 $_SESSION['user_role'] = $user['role'];
+                $_SESSION['user_foto'] = $user['foto'];
                 
                 // Alihkan ke dashboard menggunakan jalur yang benar
                 header('Location: pages/dashboard.php');
@@ -61,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nip_bps = trim($_POST['nip_bps']);
 
         // SQL disesuaikan: kolom 'foto' dihapus
-        $sql = "SELECT id, nama, nip_bps FROM pegawai WHERE nama = ? AND nip_bps = ?";
+        $sql = "SELECT id, nama, nip_bps, foto FROM pegawai WHERE nama = ? AND nip_bps = ?";
         $stmt = $koneksi->prepare($sql);
         
         if ($stmt) {
@@ -75,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_nama'] = $user['nama'];
                 $_SESSION['user_role'] = 'Pegawai';
-                
+                $_SESSION['user_foto'] = $user['foto'];
                 header('Location: pages/dashboard.php');
                 exit();
             } else {

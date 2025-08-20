@@ -1,15 +1,62 @@
 <?php 
+// Sertakan file koneksi database dan layout utama
+session_start();
 include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-// Ambil data pegawai dari database
-$query_pegawai = "SELECT id, nama FROM pegawai";
-$result_pegawai = mysqli_query($koneksi, $query_pegawai);
+// Ambil data user dari sesi
+$user_role = $_SESSION['user_role'] ?? '';
+$user_id = $_SESSION['user_id'] ?? null;
+$user_name = $_SESSION['user_name'] ?? '';
+
+// Cek hak akses. Jika user adalah admin, berikan pesan dan keluar.
+if ($user_role === 'admin_kb-s' || $user_role === 'super_admin'|| $user_role === 'admin_kb-s' || $user_role === 'admin_pegawai' || $user_role === 'admin_prestasi') {
+    echo "<main class=\"main-content\"><div class=\"card\"><h2 class=\"text-center text-danger\">Akses Ditolak</h2><p class=\"text-center\">Halaman ini hanya bisa diakses oleh pegawai.</p></div></main>";
+    include '../includes/footer.php';
+    exit; // Keluar dari skrip
+}
 
 // Ambil data kategori dari database
-$query_kategori = "SELECT id, name FROM categories";
+$query_kategori = "SELECT id, name FROM categories ORDER BY name ASC";
 $result_kategori = mysqli_query($koneksi, $query_kategori);
+
+// Ambil data produk berdasarkan filter
+$filter_category_id = isset($_GET['kategori_id']) ? intval($_GET['kategori_id']) : 0;
+$keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+
+$sql_products = "
+    SELECT p.id, p.name, p.price, p.is_promo, p.promo_price, p.stock, p.image, c.name AS category_name
+    FROM products p
+    JOIN categories c ON p.category_id = c.id
+    WHERE 1=1
+";
+
+$params = [];
+$types = "";
+
+if ($filter_category_id > 0) {
+    $sql_products .= " AND p.category_id = ?";
+    $params[] = $filter_category_id;
+    $types .= "i";
+}
+
+if ($keyword !== '') {
+    $sql_products .= " AND p.name LIKE ?";
+    $params[] = '%' . $keyword . '%';
+    $types .= "s";
+}
+
+$sql_products .= " ORDER BY p.name ASC";
+
+// Gunakan prepared statement untuk keamanan
+$stmt_products = $koneksi->prepare($sql_products);
+if (!empty($params)) {
+    $stmt_products->bind_param($types, ...$params);
+}
+$stmt_products->execute();
+$result_products = $stmt_products->get_result();
+
 ?>
 
 <div class="main-content">
@@ -17,7 +64,6 @@ $result_kategori = mysqli_query($koneksi, $query_kategori);
         <h1>
             <i class="fa fa-shopping-cart"></i> Tambah Penjualan
         </h1>
-    
     </section>
     <section class="content">
         <div class="row">
@@ -29,81 +75,125 @@ $result_kategori = mysqli_query($koneksi, $query_kategori);
                     <div class="box-body">
                        <div class="form-card">
                          <form id="form_penjualan" method="POST" action="../proses/proses_tambah_penjualan.php">
+                            <input type="hidden" name="pegawai_id" value="<?php echo htmlspecialchars($user_id); ?>">
+                            
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group">
-                                        <label for="kategori">Pilih Kategori Produk:</label>
-                                        <select class="form-control select2" id="kategori_produk" style="width: 100%;">
-                                            <option value="">-- Semua Kategori --</option>
-                                            <?php while ($row = mysqli_fetch_assoc($result_kategori)) { ?>
-                                                <option value="<?php echo $row['id']; ?>"><?php echo $row['name']; ?></option>
-                                            <?php } ?>
-                                        </select>
+                                        <label for="pegawai">Nama Pegawai:</label>
+                                        <input type="text" class="form-control" id="nama_pegawai" value="<?php echo htmlspecialchars($user_name); ?>" readonly>
                                     </div>
-                                    <div class="box box-primary">
-                                        <div class="box-header with-border">
-                                            <h3 class="box-title">Daftar Produk</h3>
-                                        </div>
-                                        <div class="box-body">
-                                            <div id="produk_list" class="produk-grid-penjualan row"></div>
-                                        </div>
+                                    <div class="form-group">
+                                        <label for="tanggal_waktu">Tanggal & Waktu Transaksi:</label>
+                                        <input type="text" class="form-control" id="tanggal_waktu" readonly>
                                     </div>
                                 </div>
                                 <div class="col-md-8">
-                                    <!-- Input Tanggal Transaksi -->
                                     <div class="form-group">
-                                        <label for="tanggal_transaksi">Tanggal Transaksi:</label>
-                                        <input type="datetime-local" class="form-control" 
-                                               name="tanggal_transaksi" 
-                                               id="tanggal_transaksi" 
-                                               value="<?php echo date('Y-m-d\TH:i'); ?>" 
-                                               required>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="pegawai">Pilih Pegawai: (isi produk terlebih dulu)</label>
-                                        <select class="form-control select2" name="pegawai_id" required style="width: 100%;">
-                                            <option value="">-- Pilih Pegawai --</option>
-                                            <?php while ($row = mysqli_fetch_assoc($result_pegawai)) { ?>
-                                                <option value="<?php echo $row['id']; ?>"><?php echo $row['nama']; ?></option>
+                                        <label for="kategori">Pilih Kategori Produk:</label>
+                                        <select class="form-control select2" id="kategori_produk" onchange="filterProducts()" style="width: 100%;">
+                                            <option value="">-- Semua Kategori --</option>
+                                            <?php while ($row = mysqli_fetch_assoc($result_kategori)) { ?>
+                                                <option value="<?php echo $row['id']; ?>" <?php echo ($filter_category_id == $row['id']) ? 'selected' : ''; ?>><?php echo $row['name']; ?></option>
                                             <?php } ?>
                                         </select>
                                     </div>
-
-                                    <hr>
-                                    <div class="box-header with-border">
-                                        <h3 class="box-title">Produk yang Dibeli</h3>
-                                    </div>
-                                    <div class="box-body no-padding">
-                                        <table class="table table-striped table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>Nama Produk</th>
-                                                    <th style="width: 100px;">Jumlah</th>
-                                                    <th>Harga Satuan</th>
-                                                    <th>Subtotal</th>
-                                                    <th style="width: 50px;">Aksi</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="tabel_item_penjualan"></tbody>
-                                            <tfoot>
-                                                <tr>
-                                                    <td colspan="3" class="text-right"><h4><b>Total Harga:</b></h4></td>
-                                                    <td colspan="2"><h4><b id="total_harga">Rp 0</b></h4></td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <input type="text" id="searchInput" class="form-control" placeholder="Cari produk..." value="<?php echo htmlspecialchars($keyword); ?>">
+                                            <span class="input-group-btn">
+                                                <button type="button" class="btn btn-primary btn-flat" onclick="filterProducts()">
+                                                    <i class="fa fa-search"></i>
+                                                </button>
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <div class="box-footer text-right">
-                                <input type="hidden" name="total_penjualan" id="input_total_penjualan">
-                                <button type="submit" class="btn btn-success btn-lg">
-                                    <i class="fa fa-save"></i> Simpan Penjualan
-                                </button>
+                            <hr>
+                            <div id="product-list" class="row">
+                                <?php
+                                if ($result_products->num_rows > 0) {
+                                    while ($product = $result_products->fetch_assoc()) {
+                                        $isPromo = $product['is_promo'] == 1;
+                                        $price = $isPromo ? $product['promo_price'] : $product['price'];
+                                        $imgSrc = empty($product['image']) ? 'https://placehold.co/250x250/E0E0E0/888888?text=No+Image' : '../assets/img/produk/' . htmlspecialchars($product['image']);
+                                ?>
+                                <div class="col-lg-2 col-md-3 col-sm-4 col-xs-6 mb-3">
+                                    <div class="product-card">
+                                        <img src="<?php echo $imgSrc; ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
+                                        <div class="product-info">
+                                            <span class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></span>
+                                            <h5 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h5>
+                                            <p class="product-price">
+                                                <?php if ($isPromo) { ?>
+                                                    <span class="original-price">Rp <?php echo number_format($product['price'], 0, ',', '.'); ?></span>
+                                                <?php } ?>
+                                                <span class="promo-price">Rp <?php echo number_format($price, 0, ',', '.'); ?></span>
+                                            </p>
+                                            <p>Stok: <?php echo htmlspecialchars($product['stock']); ?></p>
+                                        </div>
+                                        <div class="product-actions">
+                                            <button type="button" class="btn btn-primary btn-sm tambah-produk" 
+                                                data-id="<?php echo htmlspecialchars($product['id']); ?>" 
+                                                data-name="<?php echo htmlspecialchars($product['name']); ?>" 
+                                                data-price="<?php echo htmlspecialchars($price); ?>" 
+                                                data-stock="<?php echo htmlspecialchars($product['stock']); ?>" 
+                                                <?php echo ($product['stock'] <= 0) ? 'disabled' : ''; ?>>
+                                                <i class="fa fa-plus"></i> Tambah
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php
+                                    }
+                                } else {
+                                    echo '<p class="text-center w-100">Tidak ada produk ditemukan.</p>';
+                                }
+                                ?>
                             </div>
-                        </form>
+                            <hr>
+                            <div class="row" id="keranjang-container">
+                                <div class="col-md-12">
+                                    <div class="box box-primary">
+                                        <div class="box-header with-border">
+                                            <h3 class="box-title">Keranjang Belanja</h3>
+                                        </div>
+                                        <div class="box-body no-padding">
+                                            <table class="table table-striped table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Produk</th>
+                                                        <th>Harga Satuan</th>
+                                                        <th>Jumlah</th>
+                                                        <th>Subtotal</th>
+                                                        <th>Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="cart-table">
+                                                    </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <td colspan="3" class="text-right"><strong>Total:</strong></td>
+                                                        <td colspan="2" id="cart-total-display">Rp 0</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                        <div class="box-footer">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <a href="history_penjualan.php" class="btn btn-default btn-flat">Batal</a>
+                                                </div>
+                                                <div class="col-md-6 text-right">
+                                                    <button type="submit" class="btn btn-success btn-flat btn-lg" id="checkout-btn">Checkout</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                         </form>
                        </div>
                     </div>
                 </div>
@@ -112,136 +202,82 @@ $result_kategori = mysqli_query($koneksi, $query_kategori);
     </section>
 </div>
 
-<!-- Custom Message Modal -->
-<div class="modal fade" id="messageModal" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="messageModalLabel">Notifikasi</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body" id="messageModalBody">
-        <!-- Message will be inserted here -->
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<?php include '../includes/footer.php'; ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-
 <script>
-$(document).ready(function() {
-    // Initialize Select2 on dropdowns
-    $('.select2').select2();
+    let cart = {}; // Objek untuk menyimpan keranjang belanja
 
-    let cart = {}; // Object to hold items in the cart
-
-    // Function to show a custom modal message
-    function showMessageModal(message) {
-        $('#messageModalBody').text(message);
-        $('#messageModal').modal('show');
+    // Fungsi untuk menampilkan tanggal dan waktu saat ini
+    function updateDateTime() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        document.getElementById('tanggal_waktu').value = now.toLocaleDateString('id-ID', options);
     }
 
-    function loadProduk(kategoriId) {
-        $.ajax({
-            url: '../proses/ambil_produk_by_kategori.php', 
-            type: 'GET',
-            data: { kategori_id: kategoriId },
-            success: function(data) {
-                $('#produk_list').html(data);
-            }
-        });
-    }
-
-    // Load products when category changes
-    $('#kategori_produk').on('change', function() {
-        var kategoriId = $(this).val();
-        loadProduk(kategoriId);
+    // Panggil fungsi saat halaman dimuat
+    $(document).ready(function() {
+        updateDateTime();
     });
-
-    // Initial load of all products
-    loadProduk($('#kategori_produk').val());
-
-    // Function to format numbers to Rupiah format
-    function formatRupiah(angka) {
-        var reverse = angka.toString().split('').reverse().join(''),
-            ribuan = reverse.match(/\d{1,3}/g);
-        ribuan = ribuan.join('.').split('').reverse().join('');
-        return ribuan;
+    
+    // Fungsi untuk mengarahkan ke halaman dengan filter yang diperbarui
+    function filterProducts() {
+        const categoryId = $('#kategori_produk').val();
+        const keyword = $('#searchInput').val();
+        window.location.href = `tambah_penjualan.php?kategori_id=${categoryId}&keyword=${keyword}`;
     }
 
-    // Function to render the cart table
+    // Fungsi untuk menghitung total belanja
+    function calculateTotal() {
+        let total = 0;
+        for (const productId in cart) {
+            total += cart[productId].price * cart[productId].qty;
+        }
+        return total;
+    }
+
+    // Fungsi untuk merender keranjang belanja
     function renderCart() {
-        $('#tabel_item_penjualan').empty();
+        const cartTable = $('#cart-table');
+        cartTable.empty();
         let total = 0;
 
         for (const productId in cart) {
             const item = cart[productId];
             const subtotal = item.price * item.qty;
             total += subtotal;
-
             const newRow = `
                 <tr data-id="${productId}">
                     <td>${item.name}</td>
+                    <td>Rp ${formatRupiah(item.price)}</td>
                     <td>
-                        <input type="number" class="form-control qty_input" name="produk[${productId}][qty]" value="${item.qty}" min="1" max="${item.stock}">
+                        <input type="number" class="form-control form-control-sm cart-qty" style="width: 80px;" value="${item.qty}" min="1" max="${item.stock}">
                     </td>
-                    <td class="price_item" data-price="${item.price}">Rp ${formatRupiah(item.price)}</td>
-                    <td class="subtotal">Rp ${formatRupiah(subtotal)}</td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm hapus-item" data-id="${productId}"><i class="fa fa-trash"></i></button>
-                    </td>
+                    <td>Rp ${formatRupiah(subtotal)}</td>
+                    <td><button type="button" class="btn btn-danger btn-sm remove-item"><i class="fa fa-trash"></i> Hapus</button></td>
                 </tr>
             `;
-            $('#tabel_item_penjualan').append(newRow);
+            cartTable.append(newRow);
         }
 
-        $('#total_harga').text('Rp ' + formatRupiah(total));
-        $('#input_total_penjualan').val(total); 
-
-        // Update event listeners for new rows
-        attachCartEventListeners();
+        $('#cart-total-display').text(`Rp ${formatRupiah(total)}`);
     }
 
-    // Function to attach event listeners to cart items
-    function attachCartEventListeners() {
-        $('.hapus-item').off('click').on('click', function() {
-            const productId = $(this).data('id');
-            delete cart[productId];
-            renderCart();
-        });
-
-        $('.qty_input').off('change').on('change', function() {
-            const productId = $(this).closest('tr').data('id');
-            const newQty = parseInt($(this).val());
-            const maxStock = parseInt($(this).attr('max'));
-            
-            if (isNaN(newQty) || newQty < 1) {
-                showMessageModal('Jumlah tidak boleh kurang dari 1.');
-                $(this).val(cart[productId].qty);
-                return;
-            }
-
-            if (newQty > maxStock) {
-                showMessageModal('Jumlah melebihi stok yang tersedia (' + maxStock + ')!');
-                $(this).val(cart[productId].qty);
-                return;
-            }
-
-            cart[productId].qty = newQty;
-            renderCart();
-        });
+    // Fungsi untuk format rupiah
+    function formatRupiah(angka) {
+        var reverse = angka.toString().split('').reverse().join(''),
+            ribuan = reverse.match(/\d{1,3}/g);
+        ribuan = ribuan.join('.').split('').reverse().join('');
+        return ribuan;
+    }
+    
+    // Fungsi untuk menggulirkan halaman ke bagian keranjang
+    function scrollToCart() {
+        $('html, body').animate({
+            scrollTop: $('#keranjang-container').offset().top 
+        }, 800);
     }
 
-    // Main logic for the "Tambah" button
+    // Listeners Event
+    // Tangani klik tombol "Tambah"
     $(document).on('click', '.tambah-produk', function() {
         const productId = $(this).data('id');
         const productName = $(this).data('name');
@@ -249,199 +285,345 @@ $(document).ready(function() {
         const productStock = parseInt($(this).data('stock'));
 
         if (productStock <= 0) {
-            showMessageModal('Stok produk habis!');
+            alert('Stok produk habis!');
             return;
         }
 
         if (cart[productId]) {
-            showMessageModal('Produk sudah ada di keranjang!');
+            alert('Produk sudah ada di keranjang!');
+            scrollToCart();
             return;
         }
 
-        // Add item to the cart object
+        // Tambahkan item ke objek cart
         cart[productId] = {
+            id: productId,
             name: productName,
             price: productPrice,
-            qty: 1, // Default quantity
+            qty: 1,
             stock: productStock
         };
 
         renderCart();
+
+        // Panggil fungsi untuk menggulir halaman setelah item ditambahkan
+        scrollToCart();
     });
-});
+
+    // Tangani perubahan jumlah di keranjang
+    $(document).on('change', '.cart-qty', function() {
+        const productId = $(this).closest('tr').data('id');
+        const newQty = parseInt($(this).val());
+        const maxStock = parseInt($(this).attr('max'));
+        
+        if (isNaN(newQty) || newQty < 1) {
+            alert('Jumlah tidak boleh kurang dari 1.');
+            $(this).val(cart[productId].qty);
+            return;
+        }
+
+        if (newQty > maxStock) {
+            alert('Jumlah melebihi stok yang tersedia (' + maxStock + ')!');
+            $(this).val(cart[productId].qty);
+            return;
+        }
+
+        cart[productId].qty = newQty;
+        renderCart();
+    });
+
+    // Tangani penghapusan item dari keranjang
+    $(document).on('click', '.remove-item', function() {
+        const productId = $(this).closest('tr').data('id');
+        delete cart[productId];
+        renderCart();
+    });
+    
+    // Logika untuk menangani pengiriman form
+    $('#form_penjualan').on('submit', function(e) {
+        if (Object.keys(cart).length === 0) {
+            alert('Keranjang belanja kosong! Tambahkan produk sebelum checkout.');
+            e.preventDefault();
+            return;
+        }
+
+        const form = $(this);
+        let totalPenjualan = 0;
+
+        // Loop melalui objek cart dan tambahkan input tersembunyi
+        for (const productId in cart) {
+            const item = cart[productId];
+            
+            // Tambahkan input tersembunyi untuk setiap produk
+            form.append(`<input type="hidden" name="produk[${item.id}][qty]" value="${item.qty}">`);
+            
+            totalPenjualan += item.price * item.qty;
+        }
+
+        // Tambahkan input tersembunyi untuk total penjualan
+        form.append(`<input type="hidden" name="total_penjualan" value="${totalPenjualan}">`);
+    });
 </script>
+
 <style>
-    /* Styling untuk daftar produk dalam form */
-    .produk-grid-penjualan {
-        display: grid;
-        /* Menggunakan `repeat(auto-fit, ...)` agar lebih fleksibel saat ada sedikit item */
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 15px;
-        max-height: 400px;
-        overflow-y: auto;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-    }
-    
-    .product-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        transition: transform 0.2s ease;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        /* Tambahkan ini untuk memastikan tinggi card seragam */
-        height: 100%;
-    }
+/* Main Content and Header Styling */
+.main-content {
+    padding: 20px;
+}
 
-    .product-card:hover {
-        transform: translateY(-4px);
-    }
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
 
-    /* Styling untuk gambar produk */
-    .product-image {
-        width: 100%;
-        /* Mengatur aspek rasio gambar agar seragam */
-        aspect-ratio: 1 / 1; 
-        /* Pastikan gambar terpotong dan mengisi ruang */
-        object-fit: cover;
-        border-radius: 6px;
-        margin-bottom: 10px;
-    }
-    
-    .product-card h4 {
-        margin: 5px 0;
-        font-weight: 600;
-        color: #333;
-    }
-    
-    .product-card p {
-        margin: 0;
-        font-size: 0.9rem;
-        color: #666;
-    }
-    
-    .product-card .btn-tambah {
-        margin-top: 10px;
-        width: 100%;
-    }
+.box {
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background-color: #fff;
+    margin-bottom: 20px;
+}
 
-    /* Styling untuk footer card */
-    .card-footer {
-        margin-top: auto; /* Mendorong footer ke bawah */
-    }
-    
-    .form-card {
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    }
+.box-header {
+    border-bottom: 1px solid #f4f4f4;
+    padding: 10px 15px;
+}
 
-    .form-card .form-group {
-        margin-bottom: 20px;
-    }
+.box-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
 
-    .box-header.with-border h3.box-title {
-        border-bottom: 2px solid #007bff;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
+.box-body {
+    padding: 15px;
+}
 
-    .table {
-        margin-top: 20px;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
-    .table thead th {
-        background-color: #007bff;
-        color: #fff;
-        border-color: #007bff;
-    }
-    
-    .table tbody td {
-        vertical-align: middle;
-    }
-    
-    .table tfoot td {
-        font-size: 1.2rem;
-        font-weight: bold;
-    }
+.form-card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+}
 
-    .qty_input {
-        width: 70px;
-        text-align: center;
-    }
+.form-group {
+    margin-bottom: 15px;
+}
 
-    .text-right {
-        text-align: right;
-    }
-    
-    .btn-lg {
-        font-size: 1.1rem;
-        padding: 10px 20px;
-    }
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
 
-    /* Modal Styling */
-    .modal {
-        display: none; /* Hide by default */
-        position: fixed;
-        z-index: 1050;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        outline: 0;
-        background-color: rgba(0,0,0,0.5); /* Semi-transparent overlay */
-    }
+.select2 {
+    width: 100% !important;
+}
 
-    .modal-dialog {
-        position: relative;
-        width: auto;
-        margin: 1.75rem auto;
-    }
-    .modal-dialog-centered {
-        display: flex;
-        align-items: center;
-        min-height: calc(100% - 3.5rem);
-    }
+.input-group {
+    display: flex;
+}
 
-    .modal-content {
-        position: relative;
-        background-color: #fff;
-        border: 1px solid rgba(0,0,0,.2);
-        border-radius: 12px;
-        outline: 0;
-        width: 90%; /* Adjust width for mobile */
-        max-width: 500px;
-        margin: 0 auto;
+.input-group .form-control {
+    flex-grow: 1;
+}
+
+.input-group-btn {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.btn {
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-flat {
+    border-radius: 0;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-left: -15px;
+    margin-right: -15px;
+}
+
+.col-md-4, .col-md-8, .col-lg-2, .col-md-3, .col-sm-4, .col-xs-6 {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.col-md-4 {
+    flex-basis: 33.3333%;
+    max-width: 33.3333%;
+}
+.col-md-8 {
+    flex-basis: 66.6667%;
+    max-width: 66.6667%;
+}
+.col-md-12 {
+    flex-basis: 100%;
+    max-width: 100%;
+}
+
+@media (min-width: 1200px) {
+    .col-lg-2 {
+        flex: 0 0 16.66667%;
+        max-width: 16.66667%;
     }
-    
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        border-bottom: 1px solid #e9ecef;
+}
+@media (min-width: 992px) and (max-width: 1199px) {
+    .col-md-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
     }
-    .modal-body {
-        position: relative;
-        flex: 1 1 auto;
-        padding: 1rem;
+}
+@media (min-width: 768px) and (max-width: 991px) {
+    .col-sm-4 {
+        flex: 0 0 33.33333%;
+        max-width: 33.33333%;
     }
-    .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        padding: 1rem;
-        border-top: 1px solid #e9ecef;
+}
+@media (max-width: 767px) {
+    .col-xs-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
     }
-    .close {
-        font-size: 1.5rem;
-    }
+}
+
+/* Product Card Styling */
+.product-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+.product-image {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.product-info {
+    text-align: left;
+}
+
+.product-category {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.product-name {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.product-price {
+    margin: 5px 0 10px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #212529;
+}
+
+.product-price .original-price {
+    text-decoration: line-through;
+    color: #888;
+    font-weight: normal;
+    font-size: 0.8em;
+    margin-right: 5px;
+}
+
+.product-actions {
+    margin-top: 10px;
+}
+
+.tambah-produk {
+    width: 100%;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 1rem;
+    background-color: transparent;
+    border-collapse: collapse;
+}
+
+.table th, .table td {
+    padding: .75rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+}
+
+.table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table tbody + tbody {
+    border-top: 2px solid #dee2e6;
+}
+
+.table-bordered {
+    border: 1px solid #dee2e6;
+}
+
+.table-bordered th, .table-bordered td {
+    border: 1px solid #dee2e6;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.btn-default {
+    background-color: #e9ecef;
+    color: #212529;
+}
+
+.box-footer {
+    padding: 15px;
+    border-top: 1px solid #f4f4f4;
+}
 </style>

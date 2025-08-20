@@ -7,6 +7,10 @@ if (session_status() == PHP_SESSION_NONE) {
 // Ambil info pengguna dari sesi
 $nama_tampil = $_SESSION['user_nama'] ?? 'Admin';
 $role_tampil = $_SESSION['user_role'] ?? 'Admin';
+$foto_user = $_SESSION['user_foto'] ?? null;
+
+// Tentukan path relatif untuk file CSS
+$relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SELF']), '/') - 1);
 ?>
 
 <!DOCTYPE html>
@@ -15,36 +19,31 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <!-- Impor Font Awesome untuk ikon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Impor font modern dari Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- CSS khusus sidebar -->
     <style>
+        /* --- Perbaikan dan Penambahan Gaya CSS --- */
         :root {
-            --primary-color: #4A90E2;
-            --secondary-color: #50E3C2;
             --sidebar-width: 250px;
-            --sidebar-bg: #2b3342;
-            --sidebar-text: #e0e6ed;
-            --active-item-bg: rgba(255, 255, 255, 0.1);
+            --sidebar-bg: #1e2a38; /* Warna dasar gelap */
+            --sidebar-text: #e0e6ed; /* Warna teks terang */
+            --accent-color: #0784faff; /* Warna aksen emas */
+            --link-hover-bg: #2b394d;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --logout-color: #e74c3c;
         }
 
-        /* Gaya Dasar */
         body {
             font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #f4f6f9;
         }
 
         /* Sidebar dan Main Content */
-        .dashboard-layout {
-            display: flex;
-        }
-
         .sidebar {
             width: var(--sidebar-width);
             background-color: var(--sidebar-bg);
@@ -55,32 +54,33 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
             position: fixed;
             top: 0;
             left: 0;
-            z-index: 100;
+            z-index: 1000;
             transition: transform 0.3s ease-in-out;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
         }
 
-        /* Tombol Toggle untuk Mobile */
+        /* Sidebar Toggle dan Overlay untuk Mobile */
         .sidebar-toggle-btn {
             display: none; /* Sembunyikan di desktop */
             position: fixed;
             top: 15px;
             left: 15px;
-            z-index: 101;
-            background: var(--primary-color);
-            color: #fff;
+            z-index: 1001;
+            background-color: rgba(255, 255, 255, 0.8);
+            color: #3498db; /* Warna ikon biru */
             border: none;
             border-radius: 8px;
             padding: 10px 15px;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease;
-        }
-        
-        .sidebar-toggle-btn:hover {
-            transform: scale(1.05);
+            transition: transform 0.3s ease, background-color 0.3s ease;
         }
 
-        /* Overlay untuk mobile */
+        .sidebar-toggle-btn:hover {
+            transform: scale(1.05);
+            background-color: #fff;
+        }
+
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -89,26 +89,34 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
-            z-index: 99;
+            z-index: 999;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
 
         /* Saat sidebar terbuka di mobile */
-        body.sidebar-open .sidebar {
-            transform: translateX(0);
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            body.sidebar-open .sidebar {
+                transform: translateX(0);
+            }
+            body.sidebar-open .sidebar-overlay {
+                display: block;
+                opacity: 1;
+            }
+            .sidebar-toggle-btn {
+                display: block;
+            }
         }
 
-        body.sidebar-open .sidebar-overlay {
-            display: block;
-            opacity: 1;
-        }
-
-        /* Gaya Logo */
+        /* Gaya Logo dan Navigasi */
         .sidebar-top {
-            padding: 20px;
+            padding: 20px 15px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
         }
         .sidebar-logo {
             display: flex;
@@ -125,57 +133,9 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
             font-weight: 600;
             color: #fff;
         }
-        
-        /* Profil Pengguna */
-        .sidebar .user-profile-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 20px 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .sidebar .user-profile-container .user-avatar {
-            font-size: 2rem;
-            color: var(--primary-color);
-            background-color: #ecf0f1;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .sidebar .user-profile-container .user-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            line-height: 1.2;
-            overflow: hidden;
-        }
-        .sidebar .user-profile-container .user-name {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #fff;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            max-width: 150px;
-        }
-        .sidebar .user-profile-container .user-role {
-            margin-top: 3px;
-            font-size: 0.8rem;
-            font-weight: 400;
-            color: var(--light-text-color);
-            text-transform: capitalize;
-        }
-
-        /* Navigasi */
         .sidebar-nav {
             flex-grow: 1;
-            padding: 0 15px;
+            padding: 15px;
             overflow-y: auto;
         }
         .sidebar-nav ul {
@@ -196,25 +156,22 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
             border-radius: 8px;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
-        .nav-item:hover {
-            background-color: var(--active-item-bg);
-            color: #fff;
+        .nav-item:hover,
+        .nav-item.active {
+            background-color: var(--link-hover-bg);
+            color: var(--accent-color);
         }
         .nav-item i {
             font-size: 1rem;
+            width: 20px;
+            text-align: center;
         }
         .nav-text {
             font-weight: 500;
         }
-
-        .kbs-mart-menu summary.nav-item,
-        .prestasi-menu summary.nav-item {
-            cursor: pointer;
-        }
-
         .sub-menu {
             list-style: none;
-            padding-left: 30px;
+            padding-left: 10px;
             margin: 5px 0 10px;
         }
         .sub-menu a {
@@ -223,9 +180,10 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
             display: block;
             text-decoration: none;
             color: var(--sidebar-text);
+            transition: color 0.2s ease;
         }
         .sub-menu a:hover {
-            color: var(--secondary-color);
+            color: var(--accent-color);
         }
         .caret {
             margin-left: auto;
@@ -235,30 +193,66 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
             transform: rotate(90deg);
         }
 
-        /* Footer */
+        /* Footer dan Profil Pengguna */
         .sidebar-footer {
-            padding: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        .user-profile-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid var(--accent-color);
+            box-shadow: 0 0 15px rgba(243, 156, 18, 0.4);
+            margin-bottom: 10px;
+        }
+        .user-avatar img, .user-avatar .fa-user-circle {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .user-avatar .fa-user-circle {
+            font-size: 80px;
+            color: #bdc3c7;
+        }
+
+        .user-profile-container .user-name {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+        }
+        .user-profile-container .user-role {
+            margin-top: 3px;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #bdc3c7;
+            text-transform: capitalize;
         }
         .logout-btn {
             background: none;
-            color: var(--sidebar-text);
+            color: var(--logout-color);
             width: 100%;
             text-align: left;
             border: none;
+            text-decoration: none;
         }
         .logout-btn:hover {
             background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* MEDIA QUERIES untuk responsif */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar-toggle-btn {
-                display: block;
-            }
         }
     </style>
 </head>
@@ -268,28 +262,35 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
     <aside id="sidebar" class="sidebar" aria-label="Sidebar navigation">
-        <!-- Bagian Atas -->
         <div class="sidebar-top">
             <div class="sidebar-logo">
                 <img src="../assets/img/logo/logo1.png" alt="Logo BPS" class="logo">
                 <h4 class="brand">BPS Dashboard</h4>
             </div>
-            <!-- Tombol tutup (close) untuk mobile -->
-            <button id="sidebarClose" class="sidebar-toggle-btn" style="position: absolute; right: 10px; top: 10px; background: none; color: #fff; box-shadow: none;"><i class="fas fa-times"></i></button>
+            <button id="sidebarClose" class="sidebar-toggle-btn" style="position: absolute; right: 10px; top: 10px; background: none; color: #3498db; box-shadow: none;"><i class="fas fa-times"></i></button>
         </div>
-    
-        <!-- Profil User -->
-        <div class="user-profile-container">
-            <div class="user-avatar">
-                <i class="fas fa-user-circle"></i>
+         <div class="user-profile-container">
+                <div class="user-avatar">
+                    <?php if ($role_tampil === 'Admin'): ?>
+                        <i class="fas fa-user-circle" style="font-size: 80px; color: #bdc3c7;"></i>
+                    <?php else: ?>
+                        <?php 
+                            // Pastikan path foto tersedia sebelum menampilkannya
+                            if (!empty($foto_user)):
+                                $foto_path = '../assets/img/pegawai/' . htmlspecialchars($foto_user);
+                        ?>
+                            <img src="<?= $foto_path ?>" alt="Foto Pengguna">
+                        <?php else: ?>
+                            <i class="fas fa-user-circle" style="font-size: 80px; color: #bdc3c7;"></i>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+                <div class="user-info">
+                    <p class="user-name"><?php echo htmlspecialchars($nama_tampil); ?></p>
+                    <p class="user-role"><?php echo ucfirst(htmlspecialchars($role_tampil)); ?></p>
+                </div>
             </div>
-            <div class="user-info">
-                <p class="user-name"><?php echo htmlspecialchars($nama_tampil); ?></p>
-                <p class="user-role"><?php echo ucfirst(htmlspecialchars($role_tampil)); ?></p>
-            </div>
-        </div>
     
-        <!-- Navigasi -->
         <nav class="sidebar-nav" role="navigation">
             <ul>
                 <li><a href="dashboard.php" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a></li>
@@ -324,12 +325,11 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
                         </ul>
                     </details>
                 </li>
-    
             </ul>
         </nav>
     
-        <!-- Logout -->
         <div class="sidebar-footer">
+            
             <a href="../logout.php" class="nav-item logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
                 <span class="nav-text">Logout</span>
@@ -345,17 +345,23 @@ $role_tampil = $_SESSION['user_role'] ?? 'Admin';
             const body = document.body;
 
             // Membuka sidebar saat tombol toggle diklik
-            sidebarToggle.addEventListener('click', function() {
-                body.classList.add('sidebar-open');
-            });
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    body.classList.add('sidebar-open');
+                });
+            }
 
             // Menutup sidebar saat tombol close atau overlay diklik
-            sidebarClose.addEventListener('click', function() {
-                body.classList.remove('sidebar-open');
-            });
-            sidebarOverlay.addEventListener('click', function() {
-                body.classList.remove('sidebar-open');
-            });
+            if (sidebarClose) {
+                sidebarClose.addEventListener('click', function() {
+                    body.classList.remove('sidebar-open');
+                });
+            }
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    body.classList.remove('sidebar-open');
+                });
+            }
         });
     </script>
 </body>
