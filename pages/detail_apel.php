@@ -42,8 +42,12 @@ if (isset($_GET['id'])) {
             <?php else: ?>
                 <p><strong>Catatan Umum:</strong> <?php echo htmlspecialchars($data_apel['keterangan']); ?></p>
             <?php endif; ?>
+        </div>
+
         <h3>Foto Bukti</h3>
-        <img src="../assets/img/bukti_apel/<?php echo htmlspecialchars($data_apel['foto_bukti']); ?>" alt="Foto Bukti Apel" class="bukti-foto">
+        <div class="image-container">
+            <img src="../assets/img/bukti_apel/<?php echo htmlspecialchars($data_apel['foto_bukti']); ?>" alt="Foto Bukti Apel" class="bukti-foto">
+        </div>
 
         <h3>Daftar Kehadiran Pegawai</h3>
     <table class="data-table">
@@ -81,5 +85,46 @@ if (isset($_GET['id'])) {
     </table>
     </div>
 </main>
+
+<style>
+/* CSS khusus untuk halaman detail_apel.php */
+.apel-info p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.apel-info p strong {
+    color: #007bff;
+    display: inline-block;
+    width: 150px;
+}
+
+.image-container {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.bukti-foto {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.bukti-foto:hover {
+    transform: scale(1.02);
+}
+
+/* Media query untuk tampilan mobile */
+@media (max-width: 768px) {
+    .apel-info p strong {
+        display: block;
+        width: auto;
+    }
+}
+</style>
 
 <?php include '../includes/footer.php'; ?>

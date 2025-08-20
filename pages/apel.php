@@ -1,13 +1,19 @@
 <?php
+session_start();
 include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
+
+// Ambil role pengguna dari sesi. Jika tidak ada, atur sebagai string kosong.
+$user_role = $_SESSION['user_role'] ?? '';
 ?>
 
 <main class="main-content">
     <div class="header-content">
         <h2>Data Apel Harian</h2>
-        <a href="tambah_apel.php" class="btn btn-primary">Tambah Apel</a>
+        <?php if ($user_role === 'admin_apel' || $user_role === 'super_admin'): ?>
+            <a href="tambah_apel.php" class="btn btn-primary">Tambah Apel</a>
+        <?php endif; ?>
     </div>
 
     <div class="card card-description">
@@ -17,17 +23,17 @@ include '../includes/sidebar.php';
             <div class="desc-item">
                 <strong><i class="fas fa-user-check"></i> Status Kehadiran:</strong>
                 <ul>
-                    <li><i class="fas fa-star text-success"></i> <strong>Hadir Awal:</strong> Hadir lebih awal dari jam apel.</li>
-                    <li><i class="fas fa-check-circle text-success"></i> <strong>Hadir:</strong> Hadir tepat waktu saat apel dimulai.</li>
-                    <li><i class="fas fa-hourglass-start text-warning"></i> <strong>Telat 1:</strong> Datang terlambat, masih mengikuti amanat pembina.</li>
-                    <li><i class="fas fa-hourglass-half text-warning"></i> <strong>Telat 2:</strong> Datang terlambat, mengikuti apel setelah amanat pembina selesai.</li>
-                    <li><i class="fas fa-hourglass-end text-warning"></i> <strong>Telat 3:</strong> Datang terlambat, mengikuti apel saat waktu berdoa.</li>
-                    <li><i class="fas fa-user-slash text-info"></i> <strong>Izin:</strong> Tidak mengikuti apel dengan alasan yang sudah diketahui.</li>
-                    <li><i class="fas fa-user-times text-danger"></i> <strong>Absen:</strong> Tidak ada kabar dan tidak mengikuti apel.</li>
-                    <li><i class="fas fa-plane text-primary"></i> <strong>Dinas Luar:</strong> Tidak ikut apel karena sedang dalam tugas dinas luar.</li>
-                    <li><i class="fas fa-bed text-danger"></i> <strong>Sakit:</strong> Tidak mengikuti apel karena sakit.</li>
-                    <li><i class="fas fa-sun text-info"></i> <strong>Cuti:</strong> Tidak mengikuti apel karena sedang cuti.</li>
-                    <li><i class="fas fa-tasks text-primary"></i> <strong>Tugas:</strong> Tidak mengikuti apel karena ada tugas khusus.</li>
+                    <li><i class="fas fa-star text-success"></i> <span class="status hadir-awal">Hadir Awal:</span> Hadir lebih awal dari jam apel.</li>
+                    <li><i class="fas fa-check-circle text-success"></i> <span class="status hadir">Hadir:</span> Hadir tepat waktu saat apel dimulai.</li>
+                    <li><i class="fas fa-hourglass-start text-warning"></i> <span class="status telat-1">Telat 1:</span> Datang terlambat, masih mengikuti amanat pembina.</li>
+                    <li><i class="fas fa-hourglass-half text-warning"></i> <span class="status telat-2">Telat 2:</span> Datang terlambat, mengikuti apel setelah amanat pembina selesai.</li>
+                    <li><i class="fas fa-hourglass-end text-warning"></i> <span class="status telat-3">Telat 3:</span> Datang terlambat, mengikuti apel saat waktu berdoa.</li>
+                    <li><i class="fas fa-user-slash text-info"></i> <span class="status izin">Izin:</span> Tidak mengikuti apel dengan alasan yang sudah diketahui.</li>
+                    <li><i class="fas fa-user-times text-danger"></i> <span class="status absen">Absen:</span> Tidak ada kabar dan tidak mengikuti apel.</li>
+                    <li><i class="fas fa-plane text-primary"></i> <span class="status dinas-luar">Dinas Luar:</span> Tidak ikut apel karena sedang dalam tugas dinas luar.</li>
+                    <li><i class="fas fa-bed text-danger"></i> <span class="status sakit">Sakit:</span> Tidak mengikuti apel karena sakit.</li>
+                    <li><i class="fas fa-sun text-info"></i> <span class="status cuti">Cuti:</span> Tidak mengikuti apel karena sedang cuti.</li>
+                    <li><i class="fas fa-tasks text-primary"></i> <span class="status tugas">Tugas:</span> Tidak mengikuti apel karena ada tugas khusus.</li>
                 </ul>
             </div>
             <div class="desc-item">
@@ -50,12 +56,12 @@ include '../includes/sidebar.php';
 
     <div class="card">
         <h3>Rekapitulasi Status Kehadiran Apel</h3>
-        <div id="kehadiran-charts-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 40px;">
-            <!-- Pie charts akan dimasukkan di sini oleh JavaScript -->
+        <div id="kehadiran-charts-container">
         </div>
     </div>
 
     <div class="card">
+        <h3>Data Apel</h3>
         <table class="data-table">
             <thead>
                 <tr>
@@ -63,7 +69,9 @@ include '../includes/sidebar.php';
                     <th>Kondisi Apel</th>
                     <th>Petugas Apel</th>
                     <th>Kehadiran</th>
-                    <th>Aksi</th>
+                    <?php if ($user_role === 'admin_apel' || $user_role === 'super_admin'): ?>
+                        <th>Aksi</th>
+                    <?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -101,16 +109,20 @@ include '../includes/sidebar.php';
                         }
                         echo "</td>";
 
-                       echo "<td>
-                                <a href='detail_apel.php?id={$row['id']}' class='btn-action'>Detail</a>
-                                <a href='../proses/proses_hapus_apel.php?id={$row['id']}'
-                                class='btn-action delete'
-                                onclick=\"return confirm('Apakah Anda yakin ingin menghapus data ini?');\">
-                                Hapus
-                                </a>
-                            </td>";
-
-
+                        // Kontrol Aksi berdasarkan role
+                        if ($user_role === 'admin_apel' || $user_role === 'super_admin') {
+                            echo "<td>
+                                    <a href='detail_apel.php?id={$row['id']}' class='btn-action detail'>Detail</a>
+                                    <a href='../proses/proses_hapus_apel.php?id={$row['id']}'
+                                    class='btn-action delete'
+                                    onclick=\"return confirm('Apakah Anda yakin ingin menghapus data ini?');\">
+                                    Hapus
+                                    </a>
+                                </td>";
+                        } else {
+                            echo "<td><a href='detail_apel.php?id={$row['id']}' class='btn-action detail'>Detail</a></td>";
+                        }
+                        
                         echo "</tr>";
                     }
                 } else {
@@ -185,43 +197,20 @@ include '../includes/sidebar.php';
         'absen' => 'Absen', 'dinas_luar' => 'Dinas Luar', 'sakit' => 'Sakit',
         'cuti' => 'Cuti', 'tugas' => 'Tugas'
     ];
-    // Palet warna baru untuk kontras yang lebih baik
     $background_colors = [
-        'rgba(34, 139, 34, 0.7)',   // hadir_awal (Forest Green)
-        'rgba(60, 179, 113, 0.7)',   // hadir (Medium Sea Green)
-        'rgba(255, 140, 0, 0.7)',   // telat_1 (Dark Orange)
-        'rgba(255, 165, 0, 0.7)',   // telat_2 (Orange)
-        'rgba(255, 215, 0, 0.7)',   // telat_3 (Gold)
-        'rgba(30, 144, 255, 0.7)',   // izin (Dodger Blue)
-        'rgba(220, 20, 60, 0.7)',   // absen (Crimson)
-        'rgba(0, 191, 255, 0.7)',   // dinas_luar (Deep Sky Blue)
-        'rgba(178, 34, 34, 0.7)',   // sakit (Firebrick)
-        'rgba(135, 206, 235, 0.7)',  // cuti (Sky Blue)
-        'rgba(70, 130, 180, 0.7)'    // tugas (Steel Blue)
+        '#28a745', '#17a2b8', '#ffc107', '#fd7e14', '#e83e8c', 
+        '#6f42c1', '#dc3545', '#007bff', '#20c997', '#6c757d', '#adb5bd'
     ];
-    $border_colors = [
-        'rgba(34, 139, 34, 1)',   
-        'rgba(60, 179, 113, 1)',   
-        'rgba(255, 140, 0, 1)',   
-        'rgba(255, 165, 0, 1)',   
-        'rgba(255, 215, 0, 1)',   
-        'rgba(30, 144, 255, 1)',   
-        'rgba(220, 20, 60, 1)',   
-        'rgba(0, 191, 255, 1)',   
-        'rgba(178, 34, 34, 1)',   
-        'rgba(135, 206, 235, 1)',  
-        'rgba(70, 130, 180, 1)'   
-    ];
-
+    
     foreach ($monthly_kehadiran_data as $month => $counts) {
         $datasets = [];
         $data_points = array_values($counts);
         $datasets[] = [
             'label' => 'Jumlah Kehadiran',
             'data' => $data_points,
-            'backgroundColor' => array_values($background_colors),
+            'backgroundColor' => $background_colors,
             'borderColor' => 'rgba(255, 255, 255, 1)',
-            'borderWidth' => 1
+            'borderWidth' => 2
         ];
         $monthly_kehadiran_datasets[$month] = [
             'labels' => array_values($kehadiran_status_labels),
@@ -236,23 +225,23 @@ include '../includes/sidebar.php';
             {
                 label: 'Apel Dilaksanakan',
                 data: <?php echo json_encode($rekap_data['ada']); ?>,
-                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
+                backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                borderColor: '#28a745',
+                borderWidth: 2
             },
             {
                 label: 'Apel Tidak Dilaksanakan',
                 data: <?php echo json_encode($rekap_data['tidak_ada']); ?>,
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1
+                backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                borderColor: '#dc3545',
+                borderWidth: 2
             },
             {
                 label: 'Apel Lupa Didokumentasikan',
                 data: <?php echo json_encode($rekap_data['lupa_didokumentasikan']); ?>,
-                backgroundColor: 'rgba(255, 205, 86, 0.5)',
-                borderColor: 'rgba(255, 205, 86, 1)',
-                borderWidth: 1
+                backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                borderColor: '#ffc107',
+                borderWidth: 2
             }
         ]
     };
@@ -281,7 +270,6 @@ include '../includes/sidebar.php';
         }
     });
 
-    // Logika untuk membuat pie chart per bulan
     const monthlyKehadiranData = <?php echo json_encode($monthly_kehadiran_datasets); ?>;
     const container = document.getElementById('kehadiran-charts-container');
 
@@ -289,13 +277,9 @@ include '../includes/sidebar.php';
         if (monthlyKehadiranData.hasOwnProperty(month)) {
             const chartData = monthlyKehadiranData[month];
             
-            // Buat elemen div untuk setiap chart dengan ukuran yang diperbesar
             const chartWrapper = document.createElement('div');
-            chartWrapper.style.width = '450px';
-            chartWrapper.style.height = '450px';
-            chartWrapper.style.marginBottom = '20px';
+            chartWrapper.className = 'chart-wrapper';
 
-            // Buat elemen canvas untuk setiap chart
             const chartCanvas = document.createElement('canvas');
             chartCanvas.id = `kehadiranChart-${month}`;
             chartWrapper.appendChild(chartCanvas);

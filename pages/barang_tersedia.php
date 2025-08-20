@@ -50,7 +50,7 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
 ?>
 
 <main class="main-content">
-    <div class="header-content d-flex justify-content-between align-items-center">
+    <div class="header-content">
         <h2>Stok Barang</h2>
         <a href="tambah_barang.php" class="btn btn-primary">Tambah Barang Baru</a>
     </div>
@@ -87,62 +87,309 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
             </ul>
         </aside>
 
-<div class="stok-barang-page">
-    <div class="product-grid">
-        <?php
-        if ($result_products && $result_products->num_rows > 0) {
-            while($row = $result_products->fetch_assoc()) {
-                $image_filename = htmlspecialchars($row['image']);
-                $final_image_path = "../assets/img/produk/" . $image_filename;
-                
-                if (empty($image_filename) || !file_exists($final_image_path)) {
-                    $final_image_path = "https://placehold.co/200x150/EEEEEE/333333?text=Image+Not+Found";
+        <div class="stok-barang-page">
+            <div class="product-grid">
+                <?php
+                if ($result_products && $result_products->num_rows > 0) {
+                    while($row = $result_products->fetch_assoc()) {
+                        $image_filename = htmlspecialchars($row['image']);
+                        $final_image_path = "../assets/img/produk/" . $image_filename;
+                        
+                        // Fallback image jika file tidak ditemukan
+                        if (empty($image_filename) || !file_exists($final_image_path)) {
+                            $final_image_path = "https://placehold.co/200x150/EEEEEE/333333?text=Image+Not+Found";
+                        }
+                        ?>
+                        <div class="product-card">
+                            <div class="product-image-wrapper">
+                                <img src="<?php echo $final_image_path; ?>" alt="<?php echo htmlspecialchars($row['name']); ?>" class="product-image">
+                            </div>
+                            <div class="product-info">
+                                <h5><?php echo htmlspecialchars($row['name']); ?></h5>
+                                <p class="category-text">Kategori: <?php echo htmlspecialchars($row['category_name']); ?></p>
+                                <div class="price-section">
+                                    <?php if ($row['is_promo'] && $row['promo_price'] !== null) { ?>
+                                        <span class="original-price">Rp <?php echo number_format($row['price'], 0, ',', '.'); ?></span>
+                                        <span class="promo-price">Rp <?php echo number_format($row['promo_price'], 0, ',', '.'); ?></span>
+                                    <?php } else { ?>
+                                        <span class="normal-price">Rp <?php echo number_format($row['price'], 0, ',', '.'); ?></span>
+                                    <?php } ?>
+                                </div>
+                                <p class="stock-text">Stok: <?php echo htmlspecialchars($row['stock']); ?></p>
+                                <p>Status: <?php echo ($row['is_promo'] ? '<span class="badge badge-warning">Promo</span>' : '<span class="badge badge-normal">Normal</span>'); ?></p>
+                            </div>
+                            <div class="product-actions">
+                                <a href="edit_barang.php?id=<?php echo $row['id']; ?>" class="btn-action edit">Edit</a>
+                                <a href="#" class="btn-action delete" data-bs-toggle="modal" data-bs-target="#deleteModal" data-id="<?php echo $row['id']; ?>">Hapus</a>
+                            </div>
+                        </div>
+                        <?php
+                    }
+                } else {
+                    echo "<p style='text-align:center; width:100%;'>Tidak ada data barang.</p>";
                 }
                 ?>
-                <div class="product-card">
-                    <img src="<?php echo $final_image_path; ?>" alt="<?php echo htmlspecialchars($row['name']); ?>">
-                    <div class="product-info">
-                        <h5><?php echo htmlspecialchars($row['name']); ?></h5>
-                        <p>Kategori: <?php echo htmlspecialchars($row['category_name']); ?></p>
-                        <p>Harga: 
-                            <?php if ($row['is_promo'] && $row['promo_price'] !== null) { ?>
-                                <span class="original-price">Rp <?php echo number_format($row['price'], 0, ',', '.'); ?></span>
-                                <span class="promo-price">Rp <?php echo number_format($row['promo_price'], 0, ',', '.'); ?></span>
-                            <?php } else { ?>
-                                Rp <?php echo number_format($row['price'], 0, ',', '.'); ?>
-                            <?php } ?>
-                        </p>
-                        <p>Stok: <?php echo htmlspecialchars($row['stock']); ?></p>
-                        <p>Status: <?php echo ($row['is_promo'] ? '<span class="badge bg-warning text-dark">Promo</span>' : 'Normal'); ?></p>
-                    </div>
-                    <div class="product-actions">
-                        <a href="../proses/proses_edit_barang.php?id=<?php echo $row['id']; ?>" class="btn-action edit">Edit</a>
-            
-                    </div>
-                </div>
-                <?php
-            }
-        } else {
-            echo "<p style='text-align:center; width:100%;'>Tidak ada data barang.</p>";
-        }
-        ?>
-    </div>
-</div>
+            </div>
         </div>
     </div>
 </main>
+
+<!-- Delete Modal -->
+<div class="modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">Konfirmasi Hapus</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Apakah Anda yakin ingin menghapus barang ini?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <a href="#" id="confirmDeleteButton" class="btn btn-danger">Hapus</a>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
     // Script untuk menangani modal hapus
     document.addEventListener('DOMContentLoaded', function () {
         const deleteModal = document.getElementById('deleteModal');
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const productId = button.getAttribute('data-id');
-            const confirmDeleteButton = deleteModal.querySelector('#confirmDeleteButton');
-            confirmDeleteButton.href = '../proses/proses_hapus_barang.php?id=' + productId;
-        });
+        // Pastikan modal ada sebelum menambahkan event listener
+        if (deleteModal) {
+            deleteModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const productId = button.getAttribute('data-id');
+                const confirmDeleteButton = deleteModal.querySelector('#confirmDeleteButton');
+                confirmDeleteButton.href = '../proses/proses_hapus_barang.php?id=' + productId;
+            });
+        }
     });
 </script>
+
+<style>
+    /* CSS Khusus untuk halaman Stok Barang */
+    .content-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .category-sidebar {
+        flex: 0 0 250px;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        height: fit-content;
+    }
+
+    .category-sidebar h4 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #333;
+        font-weight: 600;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 10px;
+    }
+
+    .category-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .category-item {
+        margin-bottom: 5px;
+    }
+
+    .category-link {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        border-radius: 8px;
+        color: #555;
+        text-decoration: none;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .category-link:hover,
+    .category-link.active {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    .category-count {
+        background-color: #e9ecef;
+        color: #495057;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .category-link.active .category-count {
+        background-color: #fff;
+        color: #007bff;
+    }
+
+    .stok-barang-page {
+        flex: 1;
+    }
+
+    /* Product Grid */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 25px;
+    }
+
+    /* Product Card */
+    .product-card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .product-image-wrapper {
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .product-card:hover .product-image {
+        transform: scale(1.1);
+    }
+    
+    .product-info {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+    
+    .product-info h5 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .product-info p {
+        margin: 0 0 8px 0;
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .price-section {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .original-price {
+        color: #888;
+        text-decoration: line-through;
+        margin-right: 10px;
+    }
+
+    .promo-price {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+    
+    .normal-price {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: .35em .65em;
+        font-size: .75em;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: .25rem;
+    }
+    .badge-warning {
+        color: #212529;
+        background-color: #ffc107;
+    }
+    .badge-normal {
+        color: #fff;
+        background-color: #28a745;
+    }
+    
+    .product-actions {
+        padding: 10px 20px 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    /* Action buttons */
+    .btn-action.edit {
+        background-color: #17a2b8;
+        color: #fff;
+    }
+
+    .btn-action.delete {
+        background-color: #dc3545;
+        color: #fff;
+    }
+
+    /* Modal Styling */
+    .modal-content {
+        border-radius: 12px;
+        border: none;
+    }
+    .modal-header {
+        border-bottom: 1px solid #e9ecef;
+    }
+    .modal-footer {
+        border-top: 1px solid #e9ecef;
+    }
+    
+    /* Media Queries for Responsiveness */
+    @media (max-width: 992px) {
+        .content-wrapper {
+            flex-direction: column;
+        }
+        .category-sidebar {
+            flex: 1;
+            margin-bottom: 20px;
+            box-shadow: none;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .product-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        }
+    }
+</style>
 
 <?php include '../includes/footer.php'; ?>

@@ -31,7 +31,71 @@ if (isset($_GET['id'])) {
     include '../includes/footer.php';
     exit;
 }
+
+// Menambahkan CSS khusus untuk tampilan detail
 ?>
+<style>
+    .detail-card {
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 12px;
+    }
+    .profile-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .profile-img-lg {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #f1f1f1;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+    }
+    .profile-header h3 {
+        margin: 10px 0 5px;
+        font-size: 1.5rem;
+        color: #333;
+    }
+    .profile-header p {
+        margin: 0;
+        color: #777;
+    }
+    .profile-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px 40px; /* Jarak antar baris dan kolom */
+        padding-top: 15px;
+    }
+    .profile-info p {
+        margin: 0;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee; /* Garis pemisah antar info */
+    }
+    .profile-info p:last-child {
+        border-bottom: none; /* Hapus garis di item terakhir */
+    }
+    .profile-info p strong {
+        display: block;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 3px;
+    }
+    hr {
+        border: 0;
+        height: 1px;
+        background: #e0e0e0;
+        margin: 20px 0;
+    }
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+    }
+</style>
 
 <main class="main-content">
     <div class="header-content">
@@ -41,7 +105,11 @@ if (isset($_GET['id'])) {
 
     <div class="card detail-card">
         <div class="profile-header">
-            <img src="../assets/img/pegawai/<?php echo htmlspecialchars($pegawai['foto']); ?>" alt="Foto <?php echo htmlspecialchars($pegawai['nama']); ?>" class="profile-img-lg">
+            <!-- Menambahkan fallback image jika foto tidak ada -->
+            <?php
+            $foto = !empty($pegawai['foto']) ? "../assets/img/pegawai/" . $pegawai['foto'] : "../assets/img/pegawai/default.png";
+            ?>
+            <img src="<?php echo htmlspecialchars($foto); ?>" alt="Foto <?php echo htmlspecialchars($pegawai['nama']); ?>" class="profile-img-lg">
             <h3><?php echo htmlspecialchars($pegawai['nama']); ?></h3>
             <p><?php echo htmlspecialchars($pegawai['jabatan']); ?></p>
         </div>
@@ -61,7 +129,7 @@ if (isset($_GET['id'])) {
             <p><strong>No. Urut:</strong> <?php echo htmlspecialchars($pegawai['no_urut']); ?></p>
             <p><strong>Seksi:</strong> <?php echo htmlspecialchars($pegawai['seksi']); ?></p>
             <p><strong>Kecamatan:</strong> <?php echo htmlspecialchars($pegawai['kecamatan']); ?></p>
-            <p><strong>Tempat Lahir:</strong> <?php echo htmlspecialchars($pegawai['alamat']); ?></p>
+            <p><strong>Alamat:</strong> <?php echo htmlspecialchars($pegawai['alamat']); ?></p>
             <p><strong>Email:</strong> <?php echo htmlspecialchars($pegawai['email']); ?></p>
         </div>
     </div>

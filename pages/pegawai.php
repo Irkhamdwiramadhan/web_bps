@@ -1,25 +1,30 @@
 <?php
+session_start();
 include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
+
+// Ambil role pengguna dari sesi
+$user_role = $_SESSION['user_role'] ?? '';
 ?>
 
 <main class="main-content">
-    <div class="header-content">
+    <!-- Mengatur layout header-content agar tombol Tambah Pegawai berada di kanan -->
+    <!-- Menambahkan padding agar tidak terlalu mepet di pojok -->
+    <div class="header-content" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 15px 20px;">
         <h2>Data Pegawai</h2>
-        <a href="tambah_pegawai.php" class="btn btn-primary">Tambah Pegawai</a>
+        <?php if ($user_role === 'admin_pegawai' || $user_role === 'super_admin'): ?>
+            <a href="tambah_pegawai.php" class="btn btn-primary">Tambah Pegawai</a>
+        <?php endif; ?>
     </div>
 
     <div class="card">
-
-        <!-- Search Bar -->
         <div style="display: flex; justify-content: flex-end; padding: 10px;">
             <input type="text" id="searchInput" placeholder="Cari pegawai..." 
                    style="padding: 8px; width: 300px; border: 1px solid #ccc; border-radius: 5px;"
                    onkeyup="filterPegawai()">
         </div>
 
-        <!-- Grid Card -->
         <style>
             .pegawai-grid {
                 display: grid;
@@ -66,7 +71,9 @@ include '../includes/sidebar.php';
                 margin-bottom: 3px;
             }
             .btn-action-group {
+                /* Mengatur agar tombol CRUD berada di tengah */
                 display: flex;
+                justify-content: center;
                 gap: 5px;
                 margin-top: 10px;
             }
@@ -76,6 +83,8 @@ include '../includes/sidebar.php';
                 font-size: 13px;
                 text-decoration: none;
                 color: #fff;
+                /* Menambahkan margin agar tidak terlalu mepet */
+                margin: 0 5px;
             }
             .btn-action.detail { background: #3498db; }
             .btn-action.edit { background: #f1c40f; color: #000; }
@@ -111,11 +120,16 @@ include '../includes/sidebar.php';
                     echo "<div class='pegawai-info'>Jabatan: $jabatan</div>";
                     echo "<div class='pegawai-info'>Seksi: $seksi</div>";
                     echo "</div>";
-                    echo "<div class='btn-action-group'>
-                            <a href='detail_pegawai.php?id=$id' class='btn-action detail'>Detail</a>
-                            <a href='edit_pegawai.php?id=$id' class='btn-action edit'>Edit</a>
-                            <a href='../proses/proses_hapus.php?id=$id' class='btn-action delete' onclick='return confirm(\"Apakah Anda yakin ingin menghapus data ini?\")'>Hapus</a>
-                          </div>";
+                    
+                    // Kontrol Aksi berdasarkan role
+                    echo "<div class='btn-action-group'>";
+                    echo "<a href='detail_pegawai.php?id=$id' class='btn-action detail'>Detail</a>";
+                    if ($user_role === 'admin_pegawai' || $user_role === 'super_admin') {
+                        echo "<a href='edit_pegawai.php?id=$id' class='btn-action edit'>Edit</a>";
+                        echo "<a href='../proses/proses_hapus.php?id=$id' class='btn-action delete' onclick='return confirm(\"Apakah Anda yakin ingin menghapus data ini?\")'>Hapus</a>";
+                    }
+                    echo "</div>"; // end btn-action-group
+
                     echo "</div>"; // end body
 
                     echo "</div>"; // end card
