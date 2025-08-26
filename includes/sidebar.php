@@ -307,6 +307,9 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
                             <li><a href="tambah_penjualan.php"><i class="fas fa-plus-circle"></i> Tambah Penjualan</a></li>
                             <li><a href="barang_tersedia.php"><i class="fas fa-box-open"></i> Stok Barang</a></li>
                             <li><a href="history_penjualan.php"><i class="fas fa-history"></i> History Penjualan</a></li>
+                            <li><a href="rekap_transaksi.php"><i class="fas fa-history"></i> Rekap Transaksi</a></li>
+                            
+
                         </ul>
                     </details>
                 </li>
@@ -322,6 +325,20 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
                             <li><a href="calon_berprestasi.php"><i class="fas fa-user-plus"></i> Daftar Calon</a></li>
                             <li><a href="form_penilaian.php"><i class="fas fa-clipboard-check"></i> Form Penilaian</a></li>
                             <li><a href="hasil_penilaian.php"><i class="fas fa-chart-line"></i> Hasil Penilaian</a></li>
+                        </ul>
+                    </details>
+                </li>
+                <li class="has-sub">
+                    <details class="prestasi-menu">
+                        <summary class="nav-item">
+                            <i class="fas fa-trophy"></i>
+                            <span class="nav-text">PMS</span>
+                            <i class="fas fa-chevron-right caret"></i>
+                        </summary>
+                        <ul class="sub-menu">
+                            <li><a href="mitra.php"><i class="fas fa-user-plus"></i> Mitra Kita</a></li>
+                            <li><a href="kegiatan.php"><i class="fas fa-clipboard-check"></i> Kegiatan</a></li>
+                            <li><a href="jenis_surveys.php"><i class="fas fa-chart-line"></i> Jenis Survey</a></li>
                         </ul>
                     </details>
                 </li>

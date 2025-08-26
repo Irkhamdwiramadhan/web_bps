@@ -111,10 +111,11 @@ $stmt->close();
                     <h3>Form Penilaian (<?= htmlspecialchars($filter_triwulan) ?>/<?= htmlspecialchars($filter_tahun) ?>)</h3>
                 </div>
                 <div class="card-body">
-                    <div class="form-group">
+                        <div class="form-group">
                         <label for="nama_penilai">Nama Penilai:</label>
                         <input type="text" id="nama_penilai" class="form-control" value="<?= htmlspecialchars($user_name) ?>" readonly>
                     </div>
+                    <br>
 
                     <p class="form-description">Berikan nilai 1-100 untuk setiap calon berdasarkan kriteria berikut. (1=Sangat Kurang, 100=Sangat Baik)</p>
                     

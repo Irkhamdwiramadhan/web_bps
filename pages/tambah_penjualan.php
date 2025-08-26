@@ -212,10 +212,25 @@ $result_products = $stmt_products->get_result();
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
         document.getElementById('tanggal_waktu').value = now.toLocaleDateString('id-ID', options);
     }
+    
+    // Fungsi untuk menyimpan keranjang ke localStorage
+    function saveCart() {
+        localStorage.setItem('shopping_cart', JSON.stringify(cart));
+    }
+    
+    // Fungsi untuk memuat keranjang dari localStorage
+    function loadCart() {
+        const storedCart = localStorage.getItem('shopping_cart');
+        if (storedCart) {
+            cart = JSON.parse(storedCart);
+            renderCart();
+        }
+    }
 
     // Panggil fungsi saat halaman dimuat
     $(document).ready(function() {
         updateDateTime();
+        loadCart(); // Muat keranjang saat halaman dimuat
     });
     
     // Fungsi untuk mengarahkan ke halaman dengan filter yang diperbarui
@@ -305,7 +320,8 @@ $result_products = $stmt_products->get_result();
         };
 
         renderCart();
-
+        saveCart(); // Simpan keranjang setelah menambahkan item
+        
         // Panggil fungsi untuk menggulir halaman setelah item ditambahkan
         scrollToCart();
     });
@@ -330,6 +346,7 @@ $result_products = $stmt_products->get_result();
 
         cart[productId].qty = newQty;
         renderCart();
+        saveCart(); // Simpan keranjang setelah mengubah jumlah
     });
 
     // Tangani penghapusan item dari keranjang
@@ -337,6 +354,7 @@ $result_products = $stmt_products->get_result();
         const productId = $(this).closest('tr').data('id');
         delete cart[productId];
         renderCart();
+        saveCart(); // Simpan keranjang setelah menghapus item
     });
     
     // Logika untuk menangani pengiriman form
@@ -362,6 +380,9 @@ $result_products = $stmt_products->get_result();
 
         // Tambahkan input tersembunyi untuk total penjualan
         form.append(`<input type="hidden" name="total_penjualan" value="${totalPenjualan}">`);
+
+        // Kosongkan keranjang dari localStorage setelah berhasil checkout
+        localStorage.removeItem('shopping_cart');
     });
 </script>
 
