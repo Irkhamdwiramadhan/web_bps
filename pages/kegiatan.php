@@ -5,9 +5,12 @@ include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
+// Tangkap parameter filter dari URL
+$filter = isset($_GET['filter']) ? $_GET['filter'] : 'semua';
+$search_query = isset($_GET['search']) ? $_GET['search'] : '';
+
 try {
-    // Kueri untuk mengambil data partisipasi mitra
-    // Kolom 'Status Partisipasi' sekarang ditentukan dari jumlah survei yang diikuti
+    // Awal kueri dasar
     $sql_mitra_partisipasi = "SELECT
                                 m.id,
                                 m.nama_lengkap,
@@ -19,13 +22,33 @@ try {
                              FROM
                                 mitra AS m
                              LEFT JOIN
-                                mitra_surveys AS ms ON m.id = ms.mitra_id
-                             GROUP BY
-                                m.id
-                             ORDER BY
-                                m.nama_lengkap ASC";
+                                mitra_surveys AS ms ON m.id = ms.mitra_id";
+    
+    // Tambahkan kondisi pencarian jika ada
+    if (!empty($search_query)) {
+        $sql_mitra_partisipasi .= " WHERE m.nama_lengkap LIKE ?";
+    }
+
+    $sql_mitra_partisipasi .= " GROUP BY m.id";
+
+    // Tambahkan kondisi HAVING berdasarkan filter
+    if ($filter === 'sudah') {
+        $sql_mitra_partisipasi .= " HAVING COUNT(ms.survei_id) > 0";
+    } elseif ($filter === 'belum') {
+        $sql_mitra_partisipasi .= " HAVING COUNT(ms.survei_id) = 0";
+    }
+
+    // Tambahkan pengurutan
+    $sql_mitra_partisipasi .= " ORDER BY m.nama_lengkap ASC";
     
     $stmt_mitra = $koneksi->prepare($sql_mitra_partisipasi);
+    
+    // Bind parameter pencarian jika ada
+    if (!empty($search_query)) {
+        $search_param = "%" . $search_query . "%";
+        $stmt_mitra->bind_param("s", $search_param);
+    }
+
     $stmt_mitra->execute();
     $result_mitra = $stmt_mitra->get_result();
     
@@ -108,14 +131,50 @@ try {
     .btn-add:hover {
         background-color: #218838;
     }
+
+    /* Gaya untuk tombol filter */
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 9999px; /* Fully rounded */
+        font-weight: 500;
+        transition: background-color 0.2s, color 0.2s;
+        text-decoration: none;
+        color: #4b5563;
+        background-color: #e5e7eb;
+    }
+    .filter-btn:hover {
+        background-color: #d1d5db;
+    }
+    .filter-btn.active {
+        background-color: #2563eb;
+        color: #fff;
+    }
+    .search-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
 </style>
 
 <div class="content-wrapper">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Halaman Kegiatan Mitra</h1>
-            <a href="tambah_kegiatan.php" class="btn-add">Tambah Kegiatan</a>
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Halaman Kegiatan Mitra</h1>
+        
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <a href="tambah_kegiatan.php" class="btn-add w-full sm:w-auto text-center">Tambah Kegiatan</a>
+
         </div>
+       
+
+
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
             <div class="summary-card summary-card-green">
@@ -126,6 +185,20 @@ try {
                 <div class="summary-number"><?= htmlspecialchars($jumlah_belum); ?></div>
                 <div class="summary-label">Mitra Belum Ikut Kegiatan</div>
             </div>
+        </div>
+        
+        <br>
+                <div class="flex flex-wrap gap-4 mb-6">
+            <a href="kegiatan.php?search=<?= urlencode($search_query) ?>" class="filter-btn <?= ($filter === 'semua') ? 'active' : '' ?>">Semua</a>
+            <a href="kegiatan.php?filter=sudah&search=<?= urlencode($search_query) ?>" class="filter-btn <?= ($filter === 'sudah') ? 'active' : '' ?>">Sudah Ikut Kegiatan</a>
+            <a href="kegiatan.php?filter=belum&search=<?= urlencode($search_query) ?>" class="filter-btn <?= ($filter === 'belum') ? 'active' : '' ?>">Belum Ikut Kegiatan</a>
+        </div>
+        <br>
+         <div>
+                        <form action="kegiatan.php" method="GET" class="w-full sm:w-auto">
+                <input type="text" name="search" placeholder="Cari nama mitra..." class="search-input" value="<?= htmlspecialchars($search_query); ?>">
+                <input type="hidden" name="filter" value="<?= htmlspecialchars($filter); ?>">
+            </form>
         </div>
 
         <div class="card">

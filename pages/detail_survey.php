@@ -159,7 +159,7 @@ $koneksi->close();
                             <div class="list-item">
                                 <div>
                                     <p class="font-medium"><?= htmlspecialchars($mitra['nama_lengkap']) ?></p>
-                                    <p class="text-sm text-gray-500">NIM: <?= htmlspecialchars($mitra['nik']) ?></p>
+                                    <p class="text-sm text-gray-500">NIK: <?= htmlspecialchars($mitra['nik']) ?></p>
                                 </div>
                             </div>
                         <?php endforeach; ?>

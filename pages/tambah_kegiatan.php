@@ -135,18 +135,25 @@ if ($result_surveys && $result_surveys->num_rows > 0) {
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 class="text-3xl font-bold text-gray-800 mb-8">Tambah Kegiatan Mitra</h1>
         <div class="form-container">
-            <form action="../proses/proses_tambah_kegiatan.php" method="POST">
+            <form action="../proses/proses_tambah_kegiatan.php" method="POST" id="kegiatan-form">
                 
                 <div class="mb-6">
-                    <label for="mitra_id" class="form-label">Nama Mitra</label>
-                    <select id="mitra_id" name="mitra_id" class="form-select" required>
-                        <option value="">Pilih Mitra</option>
-                        <?php foreach ($mitra_list as $mitra) : ?>
-                            <option value="<?= htmlspecialchars($mitra['id']) ?>">
-                                <?= htmlspecialchars($mitra['nama_lengkap']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label for="mitra-search-input" class="form-label">Nama Mitra</label>
+                    <div class="select-search-container">
+                        <input type="text" class="search-input" placeholder="Cari mitra..." id="mitra-search-input">
+                        
+                        <div id="mitra-dropdown" class="select-dropdown">
+                            <?php foreach ($mitra_list as $mitra) : ?>
+                                <div class="select-dropdown-item" 
+                                     data-id="<?= htmlspecialchars($mitra['id']) ?>"
+                                     data-name="<?= htmlspecialchars($mitra['nama_lengkap']) ?>">
+                                    <?= htmlspecialchars($mitra['nama_lengkap']) ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <input type="hidden" id="mitra_id" name="mitra_id">
+                    </div>
                 </div>
 
                 <div class="mb-6">
@@ -165,7 +172,7 @@ if ($result_surveys && $result_surveys->num_rows > 0) {
                             <?php endforeach; ?>
                         </div>
 
-                        <input type="hidden" id="survei_id" name="survei_id" required>
+                        <input type="hidden" id="survei_id" name="survei_id">
                     </div>
                 </div>
 
@@ -184,55 +191,78 @@ if ($result_surveys && $result_surveys->num_rows > 0) {
 </div>
 
 <script>
-    const searchInput = document.getElementById('survey-search-input');
-    const dropdown = document.getElementById('survey-dropdown');
-    const hiddenInput = document.getElementById('survei_id');
-    const items = dropdown.querySelectorAll('.select-dropdown-item');
+    // FUNGSI UMUM UNTUK MENGATASI SELECT-SEARCH
+    function setupSelectSearch(searchInput, dropdown, hiddenInput) {
+        const items = dropdown.querySelectorAll('.select-dropdown-item');
+        
+        // Tampilkan dropdown saat input difokuskan
+        searchInput.addEventListener('focus', () => {
+            dropdown.style.display = 'block';
+        });
 
-    // Menampilkan dropdown saat input diklik
-    searchInput.addEventListener('focus', () => {
-        dropdown.style.display = 'block';
-    });
+        // Sembunyikan dropdown saat input kehilangan fokus
+        searchInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                dropdown.style.display = 'none';
+            }, 200);
+        });
 
-    // Menyembunyikan dropdown saat input kehilangan fokus (kecuali saat mengklik item)
-    searchInput.addEventListener('blur', () => {
-        setTimeout(() => {
-            dropdown.style.display = 'none';
-        }, 200); // Penundaan untuk memungkinkan klik pada item
-    });
+        // Filter item berdasarkan input pencarian
+        searchInput.addEventListener('keyup', () => {
+            const filter = searchInput.value.toLowerCase();
+            items.forEach(item => {
+                const name = item.getAttribute('data-name').toLowerCase();
+                const abbr = item.getAttribute('data-abbr') ? item.getAttribute('data-abbr').toLowerCase() : '';
+                if (name.includes(filter) || abbr.includes(filter)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        });
 
-    // Filter item berdasarkan input pencarian
-    searchInput.addEventListener('keyup', () => {
-        const filter = searchInput.value.toLowerCase();
+        // Tangani klik pada item dropdown
         items.forEach(item => {
-            const name = item.getAttribute('data-name').toLowerCase();
-            const abbr = item.getAttribute('data-abbr').toLowerCase();
-            if (name.includes(filter) || abbr.includes(filter)) {
-                item.classList.remove('hidden');
-            } else {
-                item.classList.add('hidden');
-            }
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const id = item.getAttribute('data-id');
+                const name = item.getAttribute('data-name');
+                const abbr = item.getAttribute('data-abbr');
+                
+                searchInput.value = abbr ? `${name} (${abbr})` : name;
+                hiddenInput.value = id;
+                
+                dropdown.style.display = 'none';
+            });
         });
+    }
+
+    // Panggil fungsi untuk setiap form select-search
+    setupSelectSearch(
+        document.getElementById('mitra-search-input'),
+        document.getElementById('mitra-dropdown'),
+        document.getElementById('mitra_id')
+    );
+
+    setupSelectSearch(
+        document.getElementById('survey-search-input'),
+        document.getElementById('survey-dropdown'),
+        document.getElementById('survei_id')
+    );
+
+    // VALIDASI FORM SEBELUM SUBMIT
+    document.getElementById('kegiatan-form').addEventListener('submit', function(event) {
+        const mitraId = document.getElementById('mitra_id').value;
+        const surveiId = document.getElementById('survei_id').value;
+        const surveyKeBerapa = document.getElementById('survey_ke_berapa').value;
+
+        // Cek apakah input tersembunyi sudah memiliki nilai
+        if (!mitraId || !surveiId || !surveyKeBerapa) {
+            alert('Harap pilih Nama Mitra dan Jenis Survei dari daftar. Pastikan semua kolom terisi dengan benar.');
+            event.preventDefault(); // Mencegah form dikirim
+        }
     });
 
-    // Menangani klik pada item dropdown
-    items.forEach(item => {
-        item.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // Mencegah blur event
-            const id = item.getAttribute('data-id');
-            const name = item.getAttribute('data-name');
-            const abbr = item.getAttribute('data-abbr');
-            
-            // Mengisi input pencarian dengan nama yang dipilih
-            searchInput.value = `${name} (${abbr})`;
-            
-            // Mengisi input tersembunyi dengan ID yang benar
-            hiddenInput.value = id;
-            
-            // Menyembunyikan dropdown
-            dropdown.style.display = 'none';
-        });
-    });
 </script>
 
 <?php 

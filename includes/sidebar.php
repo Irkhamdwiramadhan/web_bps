@@ -339,6 +339,7 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
                             <li><a href="mitra.php"><i class="fas fa-user-plus"></i> Mitra Kita</a></li>
                             <li><a href="kegiatan.php"><i class="fas fa-clipboard-check"></i> Kegiatan</a></li>
                             <li><a href="jenis_surveys.php"><i class="fas fa-chart-line"></i> Jenis Survey</a></li>
+                            <li><a href="penilaian_mitra.php"><i class="fas fa-chart-line"></i> Penilain Mitra</a></li>
                         </ul>
                     </details>
                 </li>
