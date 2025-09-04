@@ -33,7 +33,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $nip_bps = trim($_POST['nip_bps']);
         $nama_pangkat = trim($_POST['nama_pangkat']);
         
-        $sql = "SELECT nip_bps, nama FROM pegawai WHERE nip_bps = ?";
+        // PERBAIKAN: Ambil ID, nama, nip_bps
+        $sql = "SELECT id, nip_bps, nama FROM pegawai WHERE nip_bps = ?";
         $stmt = $koneksi->prepare($sql);
         $stmt->bind_param("s", $nip_bps);
         $stmt->execute();
@@ -43,10 +44,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $pegawai = $result->fetch_assoc();
             
             if ($pegawai['nama'] === $nama_pangkat) {
+                
+                // PERBAIKAN: Ambil peran dari tabel 'menu_akses'
+                $sql_role = "SELECT peran_menu FROM menu_akses WHERE pegawai_id = ?";
+                $stmt_role = $koneksi->prepare($sql_role);
+                $stmt_role->bind_param("i", $pegawai['id']);
+                $stmt_role->execute();
+                $result_role = $stmt_role->get_result();
+                
+                $user_role = 'pegawai'; // Default role
+                if ($result_role->num_rows > 0) {
+                    $role_data = $result_role->fetch_assoc();
+                    $user_role = $role_data['peran_menu'];
+                }
+                
+                // Simpan data ke sesi
                 $_SESSION['loggedin'] = true;
-                $_SESSION['nip'] = $pegawai['nip_bps'];
+                $_SESSION['user_id'] = $pegawai['id'];
                 $_SESSION['user_nama'] = $pegawai['nama'];
-                $_SESSION['user_role'] = "Pegawai";
+                $_SESSION['user_role'] = $user_role; // Menggunakan peran dari database
                 
                 header("Location: ../pages/dashboard.php");
                 exit();
@@ -54,11 +70,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
     
-    header("Location: ../pages/login.php?status=error&message=NIP atau Nama salah.");
+    // Alihkan kembali ke halaman login jika peran tidak valid
+    $_SESSION['error_message'] = "Nama atau NIP salah.";
+    header("Location: ../login.php");
     exit();
 
 } else {
-    header("Location: ../pages/login.php");
+    header("Location: ../login.php");
     exit();
 }
-?>

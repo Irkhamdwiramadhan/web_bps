@@ -4,8 +4,22 @@ include '../includes/koneksi.php';
 
 // Path file untuk menyimpan status rilis
 $release_file = 'release_status.json';
-$user_role = $_SESSION['user_role'] ?? '';
-$is_admin = in_array($user_role, ['super_admin', 'admin_prestasi']);
+
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+// Catatan: Asumsi $_SESSION['user_role'] adalah array, seperti yang diatur di login.php
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur admin di halaman ini
+$allowed_admin_roles = ['super_admin', 'admin_prestasi'];
+
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan
+$is_admin = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_admin_roles)) {
+        $is_admin = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 
 // Logika untuk menangani aksi rilis/batal rilis oleh admin
 if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -32,8 +46,8 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 
 // Menyiapkan variabel filter
-$filter_tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
-$filter_triwulan = isset($_GET['triwulan']) ? $_GET['triwulan'] : ceil(date('n') / 3);
+$filter_tahun = isset($_GET['tahun']) ? htmlspecialchars($_GET['tahun']) : date('Y');
+$filter_triwulan = isset($_GET['triwulan']) ? htmlspecialchars($_GET['triwulan']) : ceil(date('n') / 3);
 
 // Cek status rilis
 $is_released = false;
@@ -51,8 +65,10 @@ if ($is_admin) {
     $sql_all_pegawai = "SELECT id, nama FROM pegawai ORDER BY nama ASC";
     $result_all_pegawai = mysqli_query($koneksi, $sql_all_pegawai);
     $all_pegawai_map = [];
-    while ($row = mysqli_fetch_assoc($result_all_pegawai)) {
-        $all_pegawai_map[$row['id']] = $row['nama'];
+    if ($result_all_pegawai) {
+        while ($row = mysqli_fetch_assoc($result_all_pegawai)) {
+            $all_pegawai_map[$row['id']] = $row['nama'];
+        }
     }
 
     $sql_rated_pegawai = "
@@ -307,9 +323,11 @@ $result_filter = mysqli_query($koneksi, $sql_filter);
                             <?php 
                             $result_filter_copy = mysqli_query($koneksi, $sql_filter);
                             $years = [];
-                            while($row = mysqli_fetch_assoc($result_filter_copy)) {
-                                if(!in_array($row['tahun'], $years)) {
-                                    $years[] = $row['tahun'];
+                            if ($result_filter_copy) {
+                                while($row = mysqli_fetch_assoc($result_filter_copy)) {
+                                    if(!in_array($row['tahun'], $years)) {
+                                        $years[] = $row['tahun'];
+                                    }
                                 }
                             }
                             rsort($years);

@@ -6,7 +6,7 @@ if (session_status() == PHP_SESSION_NONE) {
 
 // Ambil info pengguna dari sesi
 $nama_tampil = $_SESSION['user_nama'] ?? 'Admin';
-$role_tampil = $_SESSION['user_role'] ?? 'Admin';
+$role_tampil = $_SESSION['user_role'] ?? ['pegawai']; // Ambil sebagai array
 $foto_user = $_SESSION['user_foto'] ?? null;
 
 // Tentukan path relatif untuk file CSS
@@ -19,7 +19,7 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,9 +28,9 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
         /* --- Perbaikan dan Penambahan Gaya CSS --- */
         :root {
             --sidebar-width: 250px;
-            --sidebar-bg: #1e2a38; /* Warna dasar gelap */
-            --sidebar-text: #e0e6ed; /* Warna teks terang */
-            --accent-color: #0784faff; /* Warna aksen emas */
+            --sidebar-bg: #1e2a38;
+            --sidebar-text: #e0e6ed;
+            --accent-color: #0784faff;
             --link-hover-bg: #2b394d;
             --border-color: rgba(255, 255, 255, 0.1);
             --logout-color: #e74c3c;
@@ -61,13 +61,13 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
 
         /* Sidebar Toggle dan Overlay untuk Mobile */
         .sidebar-toggle-btn {
-            display: none; /* Sembunyikan di desktop */
+            display: none;
             position: fixed;
             top: 15px;
             left: 15px;
             z-index: 1001;
             background-color: rgba(255, 255, 255, 0.8);
-            color: #3498db; /* Warna ikon biru */
+            color: #3498db;
             border: none;
             border-radius: 8px;
             padding: 10px 15px;
@@ -124,8 +124,8 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
             gap: 10px;
         }
         .sidebar-logo .logo {
-            width: 40px;
-            height: 40px;
+            width: 80px;
+            height: 70px;
         }
         .sidebar-logo .brand {
             margin: 0;
@@ -169,15 +169,20 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
         .nav-text {
             font-weight: 500;
         }
+        /* Perbaikan: Mengubah padding-left dan menambahkan border untuk indentasi yang jelas */
         .sub-menu {
             list-style: none;
-            padding-left: 10px;
-            margin: 5px 0 10px;
+            padding: 10px 0 10px 45px;
+            margin: 0;
+            border-left: 2px solid var(--border-color);
         }
+        /* Perbaikan: Membuat sub-menu a menjadi flexbox agar ikon dan teks sejajar */
         .sub-menu a {
             padding: 8px 0;
             font-size: 0.9rem;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 15px;
             text-decoration: none;
             color: var(--sidebar-text);
             transition: color 0.2s ease;
@@ -210,6 +215,10 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
         .user-avatar {
             width: 80px;
             height: 80px;
+            -webkit-border-radius: 50%;
+            -moz-border-radius: 50%;
+            -ms-border-radius: 50%;
+            -o-border-radius: 50%;
             border-radius: 50%;
             overflow: hidden;
             border: 3px solid var(--accent-color);
@@ -243,6 +252,7 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
             color: #bdc3c7;
             text-transform: capitalize;
         }
+        /* Perbaikan: Mengubah tombol logout agar konsisten dengan nav-item */
         .logout-btn {
             background: none;
             color: var(--logout-color);
@@ -250,10 +260,45 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
             text-align: left;
             border: none;
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
         .logout-btn:hover {
             background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
         }
+        .brand {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800; /* Membuat font lebih tebal */
+    font-size: 24px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 1px;
+    margin: 0;
+    
+    /* Efek Gradasi Warna */
+    background: linear-gradient(90deg, #ffffffff, #267bacff); /* Gradasi dari biru tua ke biru kebiruan */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    /* Efek Bayangan */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.brand br + span { /* Menambahkan gaya khusus untuk 'Tegal' */
+    display: block;
+    font-size: 16px; /* Ukuran font lebih kecil untuk 'Tegal' */
+    font-weight: 600;
+    line-height: 1;
+    color: #ffffffff; /* Warna abu-abu yang lebih lembut */
+    text-transform: capitalize;
+    letter-spacing: 0.5px;
+}
     </style>
 </head>
 <body>
@@ -264,18 +309,34 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
     <aside id="sidebar" class="sidebar" aria-label="Sidebar navigation">
         <div class="sidebar-top">
             <div class="sidebar-logo">
-                <img src="../assets/img/logo/logo1.png" alt="Logo BPS" class="logo">
-                <h4 class="brand">BPS Dashboard</h4>
+                <img src="../assets/img/logo/logo6.png" alt="Logo BPS" class="logo" >
+                <h4 class="brand">
+    Sitik BPS <br>
+    <span> kab. Tegal</span>
+</h4>
             </div>
             <button id="sidebarClose" class="sidebar-toggle-btn" style="position: absolute; right: 10px; top: 10px; background: none; color: #3498db; box-shadow: none;"><i class="fas fa-times"></i></button>
         </div>
          <div class="user-profile-container">
                 <div class="user-avatar">
-                    <?php if ($role_tampil === 'Admin'): ?>
+                    <?php 
+                        // Periksa apakah user_role adalah array
+                        if (is_array($role_tampil)):
+                            // Menggabungkan semua peran menjadi satu string yang mudah dibaca
+                            $display_roles_formatted = array_map(function($role) {
+                                return ucfirst(str_replace('_', ' ', $role));
+                            }, $role_tampil);
+                            $display_role = implode(' dan ', $display_roles_formatted);
+                        else:
+                            // Jika bukan array (misalnya string tunggal), ambil langsung
+                            $display_role = ucfirst(str_replace('_', ' ', $role_tampil));
+                        endif;
+
+                        if (in_array('super_admin', $role_tampil) || in_array('admin', $role_tampil)):
+                    ?>
                         <i class="fas fa-user-circle" style="font-size: 80px; color: #bdc3c7;"></i>
                     <?php else: ?>
                         <?php 
-                            // Pastikan path foto tersedia sebelum menampilkannya
                             if (!empty($foto_user)):
                                 $foto_path = '../assets/img/pegawai/' . htmlspecialchars($foto_user);
                         ?>
@@ -287,13 +348,21 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
                 </div>
                 <div class="user-info">
                     <p class="user-name"><?php echo htmlspecialchars($nama_tampil); ?></p>
-                    <p class="user-role"><?php echo ucfirst(htmlspecialchars($role_tampil)); ?></p>
+                    <p class="user-role"><?php echo $display_role; ?></p>
                 </div>
             </div>
     
         <nav class="sidebar-nav" role="navigation">
             <ul>
                 <li><a href="dashboard.php" class="nav-item"><i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span></a></li>
+                
+                <?php 
+                // Logika baru yang lebih solid untuk menampilkan menu "Kelola Akses"
+                // Menu ini akan muncul jika user memiliki peran 'super_admin' atau 'admin_pegawai'
+                if (is_array($role_tampil) && (in_array('super_admin', $role_tampil) || in_array('admin_pegawai', $role_tampil))) {
+                    echo '<li><a href="kelola_akses.php" class="nav-item"><i class="fas fa-user-shield"></i><span class="nav-text">Kelola Akses</span></a></li>';
+                }
+                ?>
                 <li><a href="pegawai.php" class="nav-item"><i class="fas fa-users"></i><span class="nav-text">Data Pegawai</span></a></li>
                 <li><a href="apel.php" class="nav-item"><i class="fas fa-calendar-check"></i><span class="nav-text">Data Apel</span></a></li>
                 <li class="has-sub">
@@ -307,9 +376,7 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
                             <li><a href="tambah_penjualan.php"><i class="fas fa-plus-circle"></i> Tambah Penjualan</a></li>
                             <li><a href="barang_tersedia.php"><i class="fas fa-box-open"></i> Stok Barang</a></li>
                             <li><a href="history_penjualan.php"><i class="fas fa-history"></i> History Penjualan</a></li>
-                            <li><a href="rekap_transaksi.php"><i class="fas fa-history"></i> Rekap Transaksi</a></li>
-                            
-
+                            <li><a href="rekap_transaksi.php"><i class="fas fa-receipt"></i> Rekap Transaksi</a></li>
                         </ul>
                     </details>
                 </li>
@@ -329,17 +396,17 @@ $relative_path_to_css = str_repeat('../', substr_count(dirname($_SERVER['PHP_SEL
                     </details>
                 </li>
                 <li class="has-sub">
-                    <details class="prestasi-menu">
+                    <details class="pms-menu">
                         <summary class="nav-item">
-                            <i class="fas fa-trophy"></i>
+                            <i class="fas fa-clipboard-list"></i>
                             <span class="nav-text">PMS</span>
                             <i class="fas fa-chevron-right caret"></i>
                         </summary>
                         <ul class="sub-menu">
-                            <li><a href="mitra.php"><i class="fas fa-user-plus"></i> Mitra Kita</a></li>
-                            <li><a href="kegiatan.php"><i class="fas fa-clipboard-check"></i> Kegiatan</a></li>
-                            <li><a href="jenis_surveys.php"><i class="fas fa-chart-line"></i> Jenis Survey</a></li>
-                            <li><a href="penilaian_mitra.php"><i class="fas fa-chart-line"></i> Penilain Mitra</a></li>
+                            <li><a href="mitra.php"><i class="fas fa-users-cog"></i> Mitra</a></li>
+                            <li><a href="kegiatan.php"><i class="fas fa-tasks"></i> Kegiatan</a></li>
+                            <li><a href="jenis_surveys.php"><i class="fas fa-poll"></i> Jenis Survey</a></li>
+                            <li><a href="penilaian_mitra.php"><i class="fas fa-star-half-alt"></i> Penilaian Mitra</a></li>
                         </ul>
                     </details>
                 </li>

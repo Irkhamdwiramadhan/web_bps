@@ -11,7 +11,7 @@ $user_id = $_SESSION['user_id'] ?? null;
 $user_name = $_SESSION['user_name'] ?? '';
 
 // Cek hak akses. Jika user adalah admin, berikan pesan dan keluar.
-if (in_array($user_role, ['admin_super', 'admin_kb-s', 'admin_prestasi'])) {
+if (in_array($user_role, ['admin_super'])) {
     echo "<main class=\"main-content\"><div class=\"card card-access-denied\"><h2 class=\"text-center text-danger\">Akses Ditolak</h2><p class=\"text-center\">Halaman ini hanya bisa diakses oleh pegawai untuk melakukan penilaian.</p></div></main>";
     include '../includes/footer.php';
     exit; // Keluar dari skrip

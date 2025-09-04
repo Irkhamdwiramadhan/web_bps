@@ -5,9 +5,19 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 
 // Ambil role pengguna dari sesi untuk validasi hak akses
-$user_role = $_SESSION['user_role'] ?? '';
-// Tentukan apakah pengguna memiliki hak untuk mengelola (menambah dan menghapus)
-$can_manage = ($user_role === 'admin_prestasi' || $user_role === 'super_admin');
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_pegawai'];
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 
 $current_year = date('Y');
 $current_triwulan = ceil(date('n') / 3);
@@ -38,7 +48,7 @@ $result_calon = $stmt->get_result();
 <main class="main-content">
     <div class="header-content">
         <h2>Daftar Calon Pegawai Berprestasi</h2>
-        <?php if ($can_manage) : ?>
+        <?php if ($has_access_for_action): ?>
             <a href="tambah_calon_berprestasi.php" class="btn btn-primary">Tambah Calon</a>
         <?php endif; ?>
     </div>
@@ -82,7 +92,7 @@ $result_calon = $stmt->get_result();
                             <p>Jabatan: <?= htmlspecialchars($row['jabatan']) ?></p>
                             <p>NIP: <?= htmlspecialchars($row['nip']) ?></p>
                         </div>
-                        <?php if ($can_manage) : ?>
+                        <?php if ($has_access_for_action):?>
                         <div class="card-actions">
                             <a href="../proses/proses_hapus_calon.php?id=<?= $row['id'] ?>&triwulan=<?= $filter_triwulan ?>&tahun=<?= $filter_tahun ?>" 
                                class="btn btn-danger btn-sm"

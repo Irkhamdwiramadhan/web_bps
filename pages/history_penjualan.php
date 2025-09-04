@@ -7,11 +7,20 @@ include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-// Ambil role pengguna dari sesi untuk validasi hak akses
-$user_role = $_SESSION['user_role'] ?? '';
-// Tentukan apakah pengguna memiliki hak untuk mengelola (menghapus)
-$can_manage = ($user_role === 'super_admin' || $user_role === 'admin_kb-s');
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+$user_roles = $_SESSION['user_role'] ?? [];
 
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_koperasi'];
+
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 // Ambil keyword pencarian jika ada
 $keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
 
@@ -86,27 +95,42 @@ if ($stmt_sales) {
                 </tr>
             </thead>
             <tbody>
+<?php
+// Pastikan variabel `$has_access_for_action` sudah didefinisikan
+// dari file atau logika sebelumnya.
+
+// Periksa apakah hasil query penjualan tersedia dan memiliki baris data
+if ($result_sales_history && $result_sales_history->num_rows > 0) {
+    // Loop melalui setiap baris data
+    while ($row = $result_sales_history->fetch_assoc()) {
+?>
+        <tr>
+            <td><?php echo htmlspecialchars($row['id']); ?></td>
+            <td><?php echo htmlspecialchars($row['nama_pegawai']); ?></td>
+            <td><?php echo htmlspecialchars($row['date']); ?></td>
+            <td>Rp <?php echo number_format($row['total'], 0, ',', '.'); ?></td>
+            <td>
+                <a href='detail_penjualan.php?id=<?php echo $row['id']; ?>' class='btn-action'>Detail</a>
                 <?php
-                if ($result_sales_history && $result_sales_history->num_rows > 0) {
-                    while($row = $result_sales_history->fetch_assoc()) {
-                        echo "<tr>";
-                        echo "<td>" . htmlspecialchars($row['id']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['nama_pegawai']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['date']) . "</td>";
-                        echo "<td>Rp " . number_format($row['total'], 0, ',', '.') . "</td>";
-                        echo "<td>";
-                        echo "<a href='detail_penjualan.php?id=" . $row['id'] . "' class='btn-action'>Detail</a>";
-                        // Tampilkan tombol hapus hanya jika pengguna memiliki hak akses
-                        if ($can_manage) {
-                            echo "<button type='button' class='btn-action delete-btn' data-id='" . $row['id'] . "'>Hapus</button>";
-                        }
-                        echo "</td>";
-                        echo "</tr>";
-                    }
-                } else {
-                    echo "<tr><td colspan='5' style='text-align:center;'>Tidak ada riwayat penjualan.</td></tr>";
+                // Periksa apakah pengguna memiliki akses untuk melakukan aksi
+                if ($has_access_for_action) {
+                    // Tombol 'Hapus' akan ditampilkan jika kondisi di atas terpenuhi
+                    echo "<button type='button' class='btn-action delete-btn' data-id='" . htmlspecialchars($row['id']) . "'>Hapus</button>";
                 }
                 ?>
+            </td>
+        </tr>
+<?php
+    } // Akhir dari while loop
+} else {
+    // Tampilkan pesan jika tidak ada data riwayat penjualan
+?>
+    <tr>
+        <td colspan='5' style='text-align:center;'>Tidak ada riwayat penjualan.</td>
+    </tr>
+<?php
+}
+?>
             </tbody>
         </table>
     </div>

@@ -3,11 +3,10 @@
 session_start();
 include '../includes/koneksi.php';
 
-// Validasi hak akses
-if ($_SESSION['user_role'] !== 'super_admin' && $_SESSION['user_role'] !== 'admin_kb-s') {
-    die("Akses Ditolak.");
+// Memastikan hanya super_admin dan admin_koperasi yang bisa mengakses halaman ini
+if (!isset($_SESSION['user_role']) || (!in_array('super_admin', $_SESSION['user_role']) && !in_array('admin_koperasi', $_SESSION['user_role']))) {
+    die("Akses Ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.");
 }
-
 // Logika pengambilan data tetap sama
 $pegawai_id = isset($_GET['pegawai_id']) ? intval($_GET['pegawai_id']) : '';
 $periode = isset($_GET['periode']) ? $_GET['periode'] : 'harian';
@@ -236,8 +235,8 @@ foreach ($transaksi_data as $item) {
 <body>
     <div class="nota-container">
         <div class="header-nota">
-            <img src="../assets/img/logo/logo1.png" alt="Logo Koperasi">
-            <h1>KB-S Mart</h1>
+            <img src="../assets/img/logo/logo_koperasi.png" alt="Logo Koperasi">
+            <h1>B-S Mart</h1>
             <p>Koperasi Bina Sejati - BPS Kabupaten Tegal</p>
         </div>
         

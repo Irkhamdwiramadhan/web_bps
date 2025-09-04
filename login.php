@@ -1,94 +1,99 @@
 <?php
-// PASTIKAN BARIS INI ADA DI PALING ATAS
-// Memulai sesi untuk menyimpan data login
+// Pastikan sesi sudah dimulai di awal file
 session_start();
 
-// Memasukkan file koneksi database
+// Panggil file koneksi database
 include 'includes/koneksi.php';
 
 // Inisialisasi pesan error
 $error_message = '';
 
-// Memeriksa apakah form telah disubmit melalui metode POST
+// Proses saat form disubmit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Ambil nilai role dari form
-    $role = $_POST['role'];
+    $role_type = $_POST['role'] ?? '';
 
-    // Logika untuk Login Admin
-    if ($role === 'admin') {
-        // Hapus spasi di awal dan akhir username serta password
+    // Logika untuk login Admin/Super Admin
+    if ($role_type === 'admin') {
         $username = trim($_POST['username']);
         $password = trim($_POST['password']);
 
-        // Gunakan prepared statement untuk mencegah SQL Injection
-        // SQL disesuaikan: kolom 'foto' dihapus
-        $sql = "SELECT id, username, role FROM admin_users WHERE username = ? AND password = ?";
+        $sql = "SELECT id, username, password, role FROM admin_users WHERE username = ?";
         $stmt = $koneksi->prepare($sql);
         
         if ($stmt) {
-            // Bind parameter username dan password
-            $stmt->bind_param("ss", $username, $password);
+            $stmt->bind_param("s", $username);
             $stmt->execute();
             $result = $stmt->get_result();
             
-            // Periksa apakah ada 1 baris data yang ditemukan
             if ($result->num_rows === 1) {
-                // Ambil data user
                 $user = $result->fetch_assoc();
                 
-                // Kredensial cocok, buat variabel sesi
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_username'] = $user['username'];
-                $_SESSION['user_role'] = $user['role'];
-                $_SESSION['user_foto'] = $user['foto'];
-                
-                // Alihkan ke dashboard menggunakan jalur yang benar
-                header('Location: pages/dashboard.php');
-                exit();
-            } else {
-                // Kredensial tidak cocok
-                $error_message = "Username atau password salah.";
+                if ($password === $user['password']) {
+                    $_SESSION['loggedin'] = true;
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_nama'] = $user['username'];
+                    
+                    // PERHATIKAN: Peran admin/super_admin disimpan sebagai array
+                    // Ini untuk mengatasi kesalahan 'in_array()' di halaman lain.
+                    $_SESSION['user_role'] = [$user['role']]; 
+                    
+                    $_SESSION['user_foto'] = null; 
+
+                    // Arahkan ke dashboard admin
+                    header('Location: pages/dashboard.php');
+                    exit();
+                }
             }
-            // Tutup statement
-            $stmt->close();
-        } else {
-            // Jika terjadi kesalahan saat menyiapkan statement
-            $error_message = "Terjadi kesalahan pada database (Admin).";
         }
+        $error_message = "Username atau password salah.";
     } 
-    // Logika untuk Login Pegawai
-    elseif ($role === 'pegawai') {
+    
+    // Logika untuk login Pegawai
+    elseif ($role_type === 'pegawai') {
         $nama_pangkat = trim($_POST['nama_pangkat']);
         $nip_bps = trim($_POST['nip_bps']);
 
-        // SQL disesuaikan: kolom 'foto' dihapus
-        $sql = "SELECT id, nama, nip_bps, foto FROM pegawai WHERE nama = ? AND nip_bps = ?";
-        $stmt = $koneksi->prepare($sql);
+        $sql_pegawai = "SELECT id, nama, nip_bps, foto FROM pegawai WHERE nama = ? AND nip_bps = ?";
+        $stmt_pegawai = $koneksi->prepare($sql_pegawai);
         
-        if ($stmt) {
-            $stmt->bind_param("ss", $nama_pangkat, $nip_bps);
-            $stmt->execute();
-            $result = $stmt->get_result();
+        if ($stmt_pegawai) {
+            $stmt_pegawai->bind_param("ss", $nama_pangkat, $nip_bps);
+            $stmt_pegawai->execute();
+            $result_pegawai = $stmt_pegawai->get_result();
             
-            if ($result->num_rows === 1) {
-                $user = $result->fetch_assoc();
+            if ($result_pegawai->num_rows === 1) {
+                $pegawai = $result_pegawai->fetch_assoc();
                 
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_nama'] = $user['nama'];
-                $_SESSION['user_role'] = 'Pegawai';
-                $_SESSION['user_foto'] = $user['foto'];
+                // Ambil semua peran dari tabel pegawai_roles
+                $sql_roles = "SELECT r.nama FROM pegawai_roles pr JOIN roles r ON pr.role_id = r.id WHERE pr.pegawai_id = ?";
+                $stmt_roles = $koneksi->prepare($sql_roles);
+                $stmt_roles->bind_param("i", $pegawai['id']);
+                $stmt_roles->execute();
+                $result_roles = $stmt_roles->get_result();
+                
+                $user_roles = [];
+                while ($row_role = $result_roles->fetch_assoc()) {
+                    $user_roles[] = $row_role['nama'];
+                }
+                
+                // Jika tidak ada peran admin, tambahkan peran 'pegawai' sebagai default
+                if (empty($user_roles)) {
+                    $user_roles[] = 'pegawai';
+                }
+
+                $_SESSION['loggedin'] = true;
+                $_SESSION['user_id'] = $pegawai['id'];
+                $_SESSION['user_nama'] = $pegawai['nama'];
+                $_SESSION['user_role'] = $user_roles; // Simpan semua peran sebagai array
+                $_SESSION['user_foto'] = $pegawai['foto'];
+                
+                // Arahkan ke dashboard pegawai
                 header('Location: pages/dashboard.php');
                 exit();
-            } else {
-                $error_message = "Nama atau NIP BPS tidak cocok atau tidak terdaftar.";
             }
-            $stmt->close();
-        } else {
-            $error_message = "Terjadi kesalahan pada database (Pegawai).";
         }
+        $error_message = "Nama atau NIP BPS tidak cocok atau tidak terdaftar.";
     }
-    // Tutup koneksi database setelah semua proses selesai
-    $koneksi->close();
 }
 ?>
 
@@ -108,8 +113,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background-image: url('');
+            background-image: url('assets/img/logo/logo_backgorund_login.jpg');
             background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         .login-container {
             background-color: rgba(255, 255, 255, 0.95);
@@ -125,9 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #333;
         }
         .logo {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 15px;
+            width: 100px;
+            height: 100px;
         }
         .input-group {
             position: relative;
@@ -147,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #fff;
         }
         .input-group select {
-            background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+            background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3E%3C/svg%3E") no-repeat right 12px center;
             background-size: 12px;
         }
         .input-group input:focus, .input-group select:focus {
@@ -189,8 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <div class="login-container">
-        <img src="assets/img/logo/logo1.png" alt="Logo BPS" class="logo">
-        <h2>Login BPS Dashboard</h2>
+        <img src="assets/img/logo/logo-login.jpg" alt="Logo BPS" class="logo">
+        <h3>Login</h3>
+        <h4>Sistem Informasi Statistik Kabupaten Tegal</h4>
         <?php if ($error_message): ?>
             <div class="error"><?php echo htmlspecialchars($error_message); ?></div>
         <?php endif; ?>
@@ -254,8 +261,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else { // 'pegawai'
                 usernameAdminGroup.style.display = 'none';
                 passwordGroup.style.display = 'none';
-                namaPangkatGroup.style.display = 'block';
-                nipBpsGroup.style.display = 'block';
+                namaPangkatInput.style.display = 'block';
+                nipBpsInput.style.display = 'block';
 
                 usernameInput.removeAttribute('required');
                 passwordInput.removeAttribute('required');

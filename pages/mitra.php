@@ -4,12 +4,25 @@ include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_pegawai'];
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
+
 // Menangkap nilai pencarian dan filter dari URL (metode GET)
 $search_query = $_GET['q'] ?? '';
 $kecamatan_filter = $_GET['kecamatan'] ?? '';
 
 // Ambil data kecamatan dari database untuk dropdown filter
-// Query ini tidak menggunakan input user, jadi tidak perlu prepared statement.
 $sql_kecamatan = "SELECT DISTINCT nama_kecamatan FROM mitra ORDER BY nama_kecamatan ASC";
 $result_kecamatan = $koneksi->query($sql_kecamatan);
 $kecamatan_list = [];
@@ -55,6 +68,7 @@ if ($result_kecamatan && $result_kecamatan->num_rows > 0) {
         transition: all 0.4s ease-in-out;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         display: inline-block;
+        font-size: 0.85rem;
     }
 
     .btn-detail {
@@ -96,75 +110,99 @@ if ($result_kecamatan && $result_kecamatan->num_rows > 0) {
         background-color: #2563eb;
     }
 
-    /* Styling kartu data mitra */
-    .mitra-card-container {
-        display: grid;
-        gap: 1.5rem;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    }
-    
-    .mitra-card {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 1rem;
+    /* Styling Tabel (New) */
+    .data-table-container {
+        overflow-x: auto;
+        margin-top: 25px;
+        border-radius: 8px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        padding: 1.5rem;
-        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    }
-    .mitra-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        background-color: #fff;
     }
 
-    .mitra-card .profile-img {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
     }
 
-    .mitra-card h2 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    
-    .mitra-card p {
-        font-size: 0.875rem;
-        color: #6b7280;
-        margin-bottom: 0.25rem;
+    .data-table th,
+    .data-table td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
     }
 
-    .mitra-card .info-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .mitra-card .info-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .mitra-card .info-item i {
-        color: #4b5563;
+    .data-table thead th {
+        background-color: #f9fafb;
+        font-weight: 600;
+        color: #777;
+        text-transform: uppercase;
+        font-size: 0.9rem;
     }
 
-    .mitra-card .actions {
-        display: flex;
-        gap: 0.75rem;
-        justify-content: flex-end;
-        margin-top: 1rem;
+    .data-table tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    /* Media Queries untuk Desain Responsif */
+    @media (max-width: 768px) {
+        .data-table-container {
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .data-table {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .data-table thead {
+            display: none; /* Menyembunyikan header tabel */
+        }
+        .data-table,
+        .data-table tbody,
+        .data-table tr,
+        .data-table td {
+            display: block; /* Mengubah sel menjadi blok */
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .data-table tr {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #fff;
+        }
+        .data-table td {
+            text-align: right;
+            padding-left: 50%; /* Memberi ruang untuk data-label */
+            position: relative;
+        }
+        .data-table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            width: 45%;
+            text-align: left;
+            font-weight: bold;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .data-table td:first-of-type {
+            padding-top: 15px;
+        }
+        .data-table td:last-of-type {
+            border-bottom: none;
+        }
+        .btn-action {
+            margin: 5px;
+        }
     }
 </style>
 
-<div class="content-wrapper bg-gray-100 min-h-screen">
+<div class="content-wrapper min-h-screen">
     <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6 mt-14">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Daftar Mitra BPS</h1>
 
@@ -184,100 +222,90 @@ if ($result_kecamatan && $result_kecamatan->num_rows > 0) {
             <a href="tambah_mitra.php" class="btn-form btn-blue-form shadow-md"> + Tambah Mitra </a>
         </form>
 
-        <div class="mitra-card-container">
-            <?php
-            // **Penting: Penggunaan Prepared Statement untuk Mencegah SQL Injection**
-            $sql = "SELECT id, nama_lengkap, nik, foto, pekerjaan, pendidikan, nama_kecamatan FROM mitra WHERE 1=1";
-            $types = "";
-            $params = [];
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Nama Lengkap</th>
+                        <th>NIK</th>
+                        <th>Pekerjaan</th>
+                        <th>Pendidikan</th>
+                        <th>Kecamatan</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    // **Penting: Penggunaan Prepared Statement untuk Mencegah SQL Injection**
+                    $sql = "SELECT id, nama_lengkap, nik, foto, pekerjaan, pendidikan, nama_kecamatan FROM mitra WHERE 1=1";
+                    $types = "";
+                    $params = [];
 
-            if (!empty($search_query)) {
-                $sql .= " AND (nama_lengkap LIKE ? OR nik LIKE ?)";
-                $types .= "ss";
-                $params[] = "%" . $search_query . "%";
-                $params[] = "%" . $search_query . "%";
-            }
-
-            if (!empty($kecamatan_filter)) {
-                $sql .= " AND nama_kecamatan = ?";
-                $types .= "s";
-                $params[] = $kecamatan_filter;
-            }
-
-            $sql .= " ORDER BY nama_lengkap ASC";
-
-            try {
-                $stmt = $koneksi->prepare($sql);
-
-                // Periksa apakah statement berhasil disiapkan
-                if ($stmt === false) {
-                    throw new Exception("Gagal menyiapkan statement: " . $koneksi->error);
-                }
-
-                // Jika ada parameter, lakukan binding
-                if (!empty($types)) {
-                    $stmt->bind_param($types, ...$params);
-                }
-                
-                $stmt->execute();
-                $result = $stmt->get_result();
-
-                if ($result->num_rows > 0) {
-                    while ($row = $result->fetch_assoc()) {
-                        // Koreksi: Hilangkan 'uploads/' di dalam path karena sudah ada di database
-                        $foto_path = !empty($row['foto']) ? "../uploads/" . htmlspecialchars($row['foto']) : '';
-            ?>
-                        <div class="mitra-card">
-                            <div class="flex items-center justify-center mb-4">
-                                <?php if (!empty($row['foto'])): ?>
-                                    <img src="<?= $foto_path ?>" alt="Foto <?= htmlspecialchars($row['nama_lengkap']) ?>" class="profile-img">
-                                <?php else: ?>
-                                    <div class="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center text-xs text-gray-600">Tidak Ada Foto</div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="text-center mb-4">
-                                <h2 class="text-xl font-semibold text-gray-900"><?= htmlspecialchars($row['nama_lengkap']) ?></h2>
-                                <p class="text-gray-500 text-sm"><?= htmlspecialchars($row['nama_kecamatan'] ?? '-') ?></p>
-                            </div>
-                            <div class="info-grid text-gray-700">
-                                <div class="info-item">
-                                    <i class="fas fa-id-card"></i>
-                                    <p><strong>NIK:</strong> <?= htmlspecialchars($row['nik']) ?></p>
-                                </div>
-                                <div class="info-item">
-                                    <i class="fas fa-briefcase"></i>
-                                    <p><strong>Pekerjaan:</strong> <?= htmlspecialchars($row['pekerjaan'] ?? '-') ?></p>
-                                </div>
-                                <div class="info-item">
-                                    <i class="fas fa-user-graduate"></i>
-                                    <p><strong>Pendidikan:</strong> <?= htmlspecialchars($row['pendidikan'] ?? '-') ?></p>
-                                </div>
-                            </div>
-                            <div class="actions mt-4 flex justify-between">
-                                <a href="detail_mitra.php?id=<?= htmlspecialchars($row['id']) ?>" class="btn-action btn-detail">
-                                    Detail
-                                </a>
-                                <a href="edit_mitra.php?id=<?= htmlspecialchars($row['id']) ?>" class="btn-action btn-edit">
-                                    Edit
-                                </a>
-                                <a href="delete_mitra.php?id=<?= htmlspecialchars($row['id']) ?>" onclick="return confirm('Apakah Anda yakin ingin menghapus mitra ini?');" class="btn-action btn-delete">
-                                    Hapus
-                                </a>
-                            </div>
-                        </div>
-            <?php
+                    if (!empty($search_query)) {
+                        $sql .= " AND (nama_lengkap LIKE ? OR nik LIKE ?)";
+                        $types .= "ss";
+                        $params[] = "%" . $search_query . "%";
+                        $params[] = "%" . $search_query . "%";
                     }
-                } else {
-                    echo "<div class='text-center py-10 w-full'>Tidak ada data mitra yang ditemukan.</div>";
-                }
-                
-                $stmt->close();
 
-            } catch (Exception $e) {
-                // Tampilkan pesan error jika terjadi kesalahan
-                echo "<div class='text-center py-10 w-full text-red-500'>Error: " . htmlspecialchars($e->getMessage()) . "</div>";
-            }
-            ?>
+                    if (!empty($kecamatan_filter)) {
+                        $sql .= " AND nama_kecamatan = ?";
+                        $types .= "s";
+                        $params[] = $kecamatan_filter;
+                    }
+
+                    $sql .= " ORDER BY nama_lengkap ASC";
+
+                    try {
+                        $stmt = $koneksi->prepare($sql);
+
+                        // Periksa apakah statement berhasil disiapkan
+                        if ($stmt === false) {
+                            throw new Exception("Gagal menyiapkan statement: " . $koneksi->error);
+                        }
+
+                        // Jika ada parameter, lakukan binding
+                        if (!empty($types)) {
+                            $stmt->bind_param($types, ...$params);
+                        }
+                        
+                        $stmt->execute();
+                        $result = $stmt->get_result();
+                        $no = 1;
+
+                        if ($result->num_rows > 0) {
+                            while ($row = $result->fetch_assoc()) {
+                    ?>
+                                <tr>
+                                    <td data-label="No."><?= $no++ ?></td>
+                                    <td data-label="Nama Lengkap"><?= htmlspecialchars($row['nama_lengkap']) ?></td>
+                                    <td data-label="NIK"><?= htmlspecialchars($row['nik']) ?></td>
+                                    <td data-label="Pekerjaan"><?= htmlspecialchars($row['pekerjaan'] ?? '-') ?></td>
+                                    <td data-label="Pendidikan"><?= htmlspecialchars($row['pendidikan'] ?? '-') ?></td>
+                                    <td data-label="Kecamatan"><?= htmlspecialchars($row['nama_kecamatan'] ?? '-') ?></td>
+                                    <td data-label="Aksi">
+                                        <div class="flex flex-col md:flex-row gap-2">
+                                            <a href="detail_mitra.php?id=<?= htmlspecialchars($row['id']) ?>" class="btn-action btn-detail">Detail</a>
+                                            <a href="edit_mitra.php?id=<?= htmlspecialchars($row['id']) ?>" class="btn-action btn-edit">Edit</a>
+                                            <a href="delete_mitra.php?id=<?= htmlspecialchars($row['id']) ?>" onclick="return confirm('Apakah Anda yakin ingin menghapus mitra ini?');" class="btn-action btn-delete">Hapus</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                    <?php
+                            }
+                        } else {
+                            echo "<tr><td colspan='7' class='text-center py-10'>Tidak ada data mitra yang ditemukan.</td></tr>";
+                        }
+                        
+                        $stmt->close();
+
+                    } catch (Exception $e) {
+                        echo "<tr><td colspan='7' class='text-center py-10 text-red-500'>Error: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
+                    }
+                    ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

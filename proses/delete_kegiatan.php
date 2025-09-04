@@ -1,14 +1,18 @@
 <?php
+// Pastikan sesi dimulai
+session_start();
+
 // Sertakan file koneksi database
 include '../includes/koneksi.php';
 
 // Pastikan ID kegiatan dikirim melalui parameter GET
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    // Alihkan kembali jika ID tidak ditemukan
-    header('Location: ../pages/kegiatan.php?status=error&message=ID_kegiatan_tidak_ditemukan');
+    // Jika ID tidak ditemukan, arahkan kembali dengan pesan error
+    header('Location: ../pages/kegiatan.php?status=error&message=' . urlencode('ID kegiatan tidak ditemukan.'));
     exit;
 }
 
+// Ambil ID kegiatan dari URL
 $id_kegiatan = $_GET['id'];
 
 try {
@@ -27,8 +31,8 @@ try {
 
     // Jalankan kueri
     if ($stmt->execute()) {
-        // Jika berhasil, alihkan ke halaman kegiatan dengan pesan sukses
-        header('Location: ../pages/kegiatan.php?status=success&message=Kegiatan_mitra_berhasil_dihapus');
+        // Jika berhasil, alihkan ke halaman sebelumnya atau halaman detail mitra
+        header('Location: ' . $_SERVER['HTTP_REFERER'] . '?status=success&message=' . urlencode('Kegiatan mitra berhasil dihapus.'));
     } else {
         // Jika gagal, lemparkan Exception
         throw new Exception('Gagal menghapus kegiatan mitra: ' . $stmt->error);
@@ -39,10 +43,10 @@ try {
 
 } catch (Exception $e) {
     // Tangani kesalahan dan alihkan dengan pesan error
-    header('Location: ../pages/kegiatan.php?status=error&message=' . urlencode($e->getMessage()));
+    header('Location: ' . $_SERVER['HTTP_REFERER'] . '?status=error&message=' . urlencode($e->getMessage()));
     exit;
+} finally {
+    // Tutup koneksi database di semua kasus (baik berhasil atau gagal)
+    $koneksi->close();
 }
-
-// Tutup koneksi database
-$koneksi->close();
 ?>

@@ -7,11 +7,12 @@ include '../includes/sidebar.php';
 
 // Pastikan ada ID mitra yang dikirim melalui URL
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    header('Location: mitra.php?status=error&message=ID_mitra_tidak_ditemukan');
+    header('Location: kegiatan.php?status=error&message=ID_mitra_tidak_ditemukan');
     exit;
 }
 
 $mitra_id = $_GET['id'];
+$user_role = $_SESSION['user_role'] ?? '';
 
 try {
     // 1. Ambil data dasar mitra
@@ -24,17 +25,19 @@ try {
 
     // Jika mitra tidak ditemukan, alihkan kembali
     if (!$mitra) {
-        header('Location: mitra.php?status=error&message=Data_mitra_tidak_ditemukan');
+        header('Location: kegiatan.php?status=error&message=Data_mitra_tidak_ditemukan');
         exit;
     }
 
     // 2. Ambil data kegiatan (survei) yang diikuti mitra
-    // REVISI: Tambahkan kolom s.satuan
     $sql_surveys_diikuti = "SELECT
+                                ms.id,
                                 s.nama_survei,
                                 s.singkatan_survei,
                                 s.satuan,
-                                ms.survey_ke_berapa
+                                ms.survey_ke_berapa,
+                                ms.periode_jenis,
+                                ms.periode_nilai
                             FROM
                                 mitra_surveys AS ms
                             JOIN
@@ -67,7 +70,7 @@ try {
     
     body {
         font-family: 'Poppins', sans-serif;
-        background: #eef2f5;
+        background: #f0f4f8; /* Latar belakang abu-abu yang lebih lembut */
     }
     .content-wrapper {
         padding: 1rem;
@@ -82,8 +85,8 @@ try {
     .card {
         background-color: #ffffff;
         border-radius: 1rem;
-        padding: 2rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        padding: 2.5rem; /* Tambah padding */
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); /* Shadow yang lebih lembut */
     }
     .badge-green {
         background-color: #d1f7e3;
@@ -106,7 +109,7 @@ try {
     .btn-back {
         display: inline-flex;
         align-items: center;
-        padding: 0.5rem;
+        padding: 0.75rem; /* Ukuran padding lebih besar */
         border-radius: 9999px;
         background-color: #e5e7eb;
         color: #4b5563;
@@ -128,10 +131,11 @@ try {
     table {
         width: 100%;
         border-collapse: collapse;
+        font-size: 0.95rem; /* Ukuran font sedikit lebih besar */
     }
     thead th {
-        background-color: #f3f4f6;
-        color: #4b5563;
+        background-color: #e2e8f0; /* Latar belakang header tabel */
+        color: #4a5568;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -140,13 +144,24 @@ try {
     }
     tbody td {
         padding: 1rem 1.5rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e2e8f0;
     }
     tbody tr:last-child td {
         border-bottom: none;
     }
     tbody tr:hover {
         background-color: #f9fafb;
+    }
+    .btn-delete {
+        background-color: #ef4444;
+        color: #fff;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .btn-delete:hover {
+        background-color: #dc2626;
     }
 </style>
 
@@ -193,10 +208,13 @@ try {
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Survey ke-</th>
+                                    <th>Kegiatan ke-</th>
                                     <th>Nama Survei</th>
                                     <th>Singkatan</th>
                                     <th>Satuan</th>
+                                    <th>Jenis Periode</th>
+                                    <th>Nilai Periode</th>
+                                    <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -206,6 +224,15 @@ try {
                                         <td><?= htmlspecialchars($survei['nama_survei']) ?></td>
                                         <td><?= htmlspecialchars($survei['singkatan_survei']) ?></td>
                                         <td><?= htmlspecialchars($survei['satuan']) ?></td>
+                                        <td><?= htmlspecialchars($survei['periode_jenis']) ?></td>
+                                        <td><?= htmlspecialchars($survei['periode_nilai']) ?></td>
+                                        <td>
+                                            <?php if ($user_role === 'admin_mitra' || $user_role === 'super_admin'): ?>
+                                            <a href="../proses/delete_kegiatan.php?id=<?= htmlspecialchars($survei['id']) ?>"
+                                               class="btn-delete"
+                                               onclick="return confirm('Apakah Anda yakin ingin menghapus kegiatan ini?');">Hapus</a>
+                                               <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -222,8 +249,12 @@ try {
 </div>
 
 <?php
-$stmt_mitra->close();
-$stmt_surveys->close();
+if ($stmt_mitra instanceof mysqli_stmt) {
+    $stmt_mitra->close();
+}
+if ($stmt_surveys instanceof mysqli_stmt) {
+    $stmt_surveys->close();
+}
 $koneksi->close();
 include '../includes/footer.php';
 ?>

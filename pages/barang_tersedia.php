@@ -5,8 +5,20 @@ include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-// Ambil role pengguna dari sesi. Jika tidak ada, atur sebagai string kosong.
-$user_role = $_SESSION['user_role'] ?? '';
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_koperasi'];
+
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 
 // Menyiapkan variabel untuk filter
 $filter_category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : null;
@@ -56,7 +68,7 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
 <main class="main-content">
     <div class="header-content">
         <h2>Stok Barang</h2>
-        <?php if ($user_role === 'admin_kb-s' || $user_role === 'super_admin'): ?>
+        <?php  if ($has_access_for_action): ?>
             <a href="tambah_barang.php" class="btn btn-primary">Tambah Barang Baru</a>
         <?php endif; ?>
     </div>
@@ -121,12 +133,16 @@ $total_promo = $result_total_promo->fetch_assoc()['total_promo'];
                         <p>Stok: <?php echo htmlspecialchars($row['stock']); ?></p>
                         <p>Status: <?php echo ($row['is_promo'] ? '<span class="badge bg-warning text-dark">Promo</span>' : '<span class="badge bg-success text-white">Normal</span>'); ?></p>
                     </div>
-                    <?php if ($user_role === 'admin_kb-s' || $user_role === 'super_admin'): ?>
-                    <div class="product-actions">
-                        <a href="../proses/proses_edit_barang.php?id=<?php echo $row['id']; ?>" class="btn-action edit">Edit</a>
-                        <button type="button" class="btn-action delete-btn" data-id="<?php echo $row['id']; ?>">Hapus</button>
-                    </div>
-                    <?php endif; ?>
+                    <?php
+                    if ($has_access_for_action) {  ?> 
+                        `<div class="product-actions">
+                            <a href="../proses/proses_edit_barang.php?id=<?php echo $row['id']; ?>" class="btn-action edit">Edit</a>
+                            <button type="button" class="btn-action delete-btn" data-id="<?php echo $row['id']; ?>">Hapus</button>
+                        </div>`
+                    <?php    
+                    }
+                    ?>
+
                 </div>
                 <?php
                     }

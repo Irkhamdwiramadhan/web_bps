@@ -4,18 +4,33 @@ include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-// Ambil role pengguna dari sesi. Jika tidak ada, atur sebagai string kosong.
-$user_role = $_SESSION['user_role'] ?? '';
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_apel'];
+
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 ?>
 
 <main class="main-content">
     <div class="header-content">
         <h2>Data Apel Harian</h2>
-        <?php if ($user_role === 'admin_apel' || $user_role === 'super_admin'): ?>
+        <?php 
+        // Periksa variabel yang kita buat di atas untuk menampilkan tombol "Tambah Apel"
+        if ($has_access_for_action): 
+        ?>
             <a href="tambah_apel.php" class="btn btn-primary">Tambah Apel</a>
         <?php endif; ?>
     </div>
-
+        
     <div class="card card-description">
         <h3><i class="fas fa-info-circle"></i> Kondisi Apel dan Kehadiran</h3>
         <p>Berikut adalah penjelasan untuk setiap kondisi yang digunakan pada data apel:</p>
@@ -69,7 +84,7 @@ $user_role = $_SESSION['user_role'] ?? '';
                     <th>Kondisi Apel</th>
                     <th>Petugas Apel</th>
                     <th>Kehadiran</th>
-                    <?php if ($user_role === 'admin_apel' || $user_role === 'super_admin'): ?>
+                    <?php if ($has_access_for_action): ?>
                         <th>Aksi</th>
                     <?php endif; ?>
                 </tr>
@@ -88,7 +103,7 @@ $user_role = $_SESSION['user_role'] ?? '';
                         echo "<td>" . htmlspecialchars($row['petugas']) . "</td>";
                         
                         echo "<td>";
-                        // Menampilkan data kehadiran jika kondisi apel adalah 'ada' atau 'lupa_didokumentasikan'
+                        // Menampilkan data kehadiran hanya jika kondisi apel adalah 'ada' atau 'lupa_didokumentasikan'
                         if ($row['kondisi_apel'] === 'ada' || $row['kondisi_apel'] === 'lupa_didokumentasikan') {
                             $kehadiran_data = json_decode($row['kehadiran'], true);
                             
@@ -104,21 +119,19 @@ $user_role = $_SESSION['user_role'] ?? '';
                                 $display_status = ucwords(str_replace('_', ' ', $status));
                                 echo "<span class='status " . $class_name . "'>" . $display_status . ": " . $count . "</span> ";
                             }
-                        } else {
-                            echo "Tidak ada data kehadiran";
                         }
                         echo "</td>";
 
                         // Kontrol Aksi berdasarkan role
-                        if ($user_role === 'admin_apel' || $user_role === 'super_admin') {
+                        if ($has_access_for_action) {
                             echo "<td>
-                                    <a href='detail_apel.php?id={$row['id']}' class='btn-action detail'>Detail</a>
-                                    <a href='../proses/proses_hapus_apel.php?id={$row['id']}'
-                                    class='btn-action delete'
-                                    onclick=\"return confirm('Apakah Anda yakin ingin menghapus data ini?');\">
-                                    Hapus
-                                    </a>
-                                </td>";
+                                <a href='detail_apel.php?id={$row['id']}' class='btn-action detail'>Detail</a>
+                                <a href='../proses/proses_hapus_apel.php?id={$row['id']}'
+                                class='btn-action delete'
+                                onclick=\"return confirm('Apakah Anda yakin ingin menghapus data ini?');\">
+                                Hapus
+                                </a>
+                            </td>";
                         } else {
                             echo "<td><a href='detail_apel.php?id={$row['id']}' class='btn-action detail'>Detail</a></td>";
                         }
@@ -126,7 +139,7 @@ $user_role = $_SESSION['user_role'] ?? '';
                         echo "</tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='5' style='text-align:center;'>Tidak ada data apel.</td></tr>";
+                    echo "<tr><td colspan='" . ($has_access_for_action ? "5" : "4") . "' style='text-align:center;'>Tidak ada data apel.</td></tr>";
                 }
                 ?>
             </tbody>
@@ -145,12 +158,12 @@ $user_role = $_SESSION['user_role'] ?? '';
         'lupa_didokumentasikan' => [] 
     ];
     $sql_rekap = "SELECT DATE_FORMAT(tanggal, '%Y-%m') AS bulan, 
-                          SUM(CASE WHEN kondisi_apel = 'ada' THEN 1 ELSE 0 END) as ada,
-                          SUM(CASE WHEN kondisi_apel = 'tidak_ada' THEN 1 ELSE 0 END) as tidak_ada,
-                          SUM(CASE WHEN kondisi_apel = 'lupa_didokumentasikan' THEN 1 ELSE 0 END) as lupa_didokumentasikan
-                   FROM apel
-                   GROUP BY bulan
-                   ORDER BY bulan ASC";
+                             SUM(CASE WHEN kondisi_apel = 'ada' THEN 1 ELSE 0 END) as ada,
+                             SUM(CASE WHEN kondisi_apel = 'tidak_ada' THEN 1 ELSE 0 END) as tidak_ada,
+                             SUM(CASE WHEN kondisi_apel = 'lupa_didokumentasikan' THEN 1 ELSE 0 END) as lupa_didokumentasikan
+                      FROM apel
+                      GROUP BY bulan
+                      ORDER BY bulan ASC";
     $result_rekap = $koneksi->query($sql_rekap);
     if ($result_rekap->num_rows > 0) {
         while($row_rekap = $result_rekap->fetch_assoc()) {

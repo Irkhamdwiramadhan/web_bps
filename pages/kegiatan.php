@@ -73,6 +73,18 @@ try {
     echo "Error: " . htmlspecialchars($e->getMessage());
     exit;
 }
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_mitra'];
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 ?>
 
 <style>
@@ -169,8 +181,9 @@ try {
         <h1 class="text-3xl font-bold text-gray-800 mb-6">Halaman Kegiatan Mitra</h1>
         
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <?php if ($has_access_for_action): ?>
             <a href="tambah_kegiatan.php" class="btn-add w-full sm:w-auto text-center">Tambah Kegiatan</a>
-
+            <?php endif; ?>
         </div>
        
 
@@ -223,7 +236,7 @@ try {
                                     <td>
                                         <div class="flex space-x-2">
                                             <a href="detail_kegiatan.php?id=<?= htmlspecialchars($row['id']) ?>" class="btn-action btn-detail">Detail</a>
-                                            <a href="../proses/delete_kegiatan.php?id=<?= htmlspecialchars($row['id']) ?>" onclick="return confirm('Apakah Anda yakin ingin menghapus data mitra ini?');" class="btn-action btn-delete">Hapus</a>
+                                            
                                         </div>
                                     </td>
                                 </tr>

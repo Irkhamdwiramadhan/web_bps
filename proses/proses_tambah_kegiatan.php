@@ -1,49 +1,88 @@
 <?php
 session_start();
-include '../includes/koneksi.php';
+include "../includes/koneksi.php";
 
-// Pastikan request menggunakan metode POST
+// Pastikan request method adalah POST
 if ($_SERVER["REQUEST_METHOD"] != "POST") {
-    header('Location: ../pages/tambah_kegiatan.php?status=error&message=' . urlencode('Metode permintaan tidak valid.'));
+    header("Location: ../pages/tambah_kegiatan.php?status=error&message=" . urlencode("Akses tidak valid."));
     exit;
 }
 
+// Ambil input dari form
+$survei_id = $_POST['survei_id'] ?? null;
+$mitra_ids = $_POST['mitra_id'] ?? [];
+$periode_jenis = $_POST['periode_jenis'] ?? null;
+$periode_nilai = $_POST['periode_nilai'] ?? null;
+
+// Validasi input
+if (empty($survei_id) || empty($mitra_ids) || empty($periode_jenis) || empty($periode_nilai)) {
+    header("Location: ../pages/tambah_kegiatan.php?status=error&message=" . urlencode("Data kegiatan tidak lengkap. Harap lengkapi semua field."));
+    exit;
+}
+
+// Persiapan untuk menyimpan data
+$stmt_select = null;
+$stmt_insert = null;
+
 try {
-    // Tangkap data dari form dengan validasi yang lebih kuat
-    $mitra_id = filter_input(INPUT_POST, 'mitra_id', FILTER_VALIDATE_INT);
-    $survei_id = filter_input(INPUT_POST, 'survei_id', FILTER_VALIDATE_INT);
-    $survey_ke_berapa = filter_input(INPUT_POST, 'survey_ke_berapa', FILTER_VALIDATE_INT);
+    // Memulai transaksi
+    $koneksi->begin_transaction();
 
-    // Validasi data: pastikan semua input valid dan tidak kosong
-    if ($mitra_id === false || $survei_id === false || $survey_ke_berapa === false || $mitra_id === null || $survei_id === null || $survey_ke_berapa === null) {
-        throw new Exception("Data mitra, survei, atau nomor survei tidak lengkap atau tidak valid.");
+    // 1. Dapatkan nilai survey_ke_berapa yang berikutnya
+    $sql_select = "SELECT MAX(survey_ke_berapa) AS max_survey FROM mitra_surveys WHERE survei_id = ?";
+    $stmt_select = $koneksi->prepare($sql_select);
+    if (!$stmt_select) {
+        throw new Exception("Gagal menyiapkan statement SELECT: " . $koneksi->error);
     }
-    
-    // Siapkan kueri INSERT untuk menyimpan data
-    $sql_insert = "INSERT INTO mitra_surveys (mitra_id, survei_id, survey_ke_berapa) VALUES (?, ?, ?)";
+    $stmt_select->bind_param("i", $survei_id);
+    $stmt_select->execute();
+    $result = $stmt_select->get_result();
+    $row = $result->fetch_assoc();
+    $survey_ke_berapa = ($row['max_survey'] !== null) ? $row['max_survey'] + 1 : 1;
+    $stmt_select->close();
+
+    // 2. Siapkan kueri INSERT
+    // Nama tabel: `mitra_surveys`
+    // Kolom: `mitra_id`, `survei_id`, `survey_ke_berapa`, `periode_jenis`, `periode_nilai`
+    $sql_insert = "INSERT INTO mitra_surveys (mitra_id, survei_id, survey_ke_berapa, periode_jenis, periode_nilai) VALUES (?, ?, ?, ?, ?)";
     $stmt_insert = $koneksi->prepare($sql_insert);
-    
     if (!$stmt_insert) {
-        throw new Exception("Gagal menyiapkan statement insert: " . $koneksi->error);
+        throw new Exception("Gagal menyiapkan statement INSERT: " . $koneksi->error);
+    }
+    
+    // Binding parameter
+    $stmt_insert->bind_param("iiiss", $mitra_id, $survei_id, $survey_ke_berapa, $periode_jenis, $periode_nilai);
+
+    // Loop untuk setiap mitra yang dipilih
+    foreach ($mitra_ids as $mitra_id) {
+        // Eksekusi statement untuk setiap mitra
+        if (!$stmt_insert->execute()) {
+            throw new Exception("Gagal menyimpan data untuk mitra ID " . htmlspecialchars($mitra_id) . ": " . $stmt_insert->error);
+        }
     }
 
-    // Ikat parameter ke kueri
-    $stmt_insert->bind_param("iii", $mitra_id, $survei_id, $survey_ke_berapa);
+    // Commit transaksi jika semua berhasil
+    $koneksi->commit();
     
-    // Eksekusi kueri
-    if ($stmt_insert->execute()) {
-        // Jika berhasil, alihkan ke halaman kegiatan dengan pesan sukses
-        $stmt_insert->close();
-        header('Location: ../pages/kegiatan.php?status=success&message=' . urlencode('Kegiatan mitra berhasil ditambahkan.'));
-        exit;
-    } else {
-        // Jika gagal, lemparkan Exception (termasuk duplikasi yang akan ditangani database)
-        throw new Exception("Gagal menambahkan kegiatan mitra: " . $stmt_insert->error);
-    }
+    // Alihkan ke halaman daftar kegiatan dengan pesan sukses
+    header("Location: ../pages/kegiatan.php?status=success&message=" . urlencode("Kegiatan berhasil ditambahkan."));
+    exit;
 
 } catch (Exception $e) {
-    // Tangani semua kesalahan dan alihkan dengan pesan error
-    header('Location: ../pages/tambah_kegiatan.php?status=error&message=' . urlencode($e->getMessage()));
+    // Rollback transaksi jika ada kesalahan
+    $koneksi->rollback();
+    
+    // Alihkan dengan pesan error
+    header("Location: ../pages/tambah_kegiatan.php?status=error&message=" . urlencode($e->getMessage()));
     exit;
+} finally {
+    // Pastikan statement dan koneksi selalu ditutup
+    if ($stmt_select) {
+        $stmt_select->close();
+    }
+    if ($stmt_insert) {
+        $stmt_insert->close();
+    }
+    $koneksi->close();
 }
 ?>

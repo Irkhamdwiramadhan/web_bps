@@ -16,8 +16,12 @@ try {
     $kualitas = filter_input(INPUT_POST, 'kualitas', FILTER_VALIDATE_INT);
     $volume_pemasukan = filter_input(INPUT_POST, 'volume_pemasukan', FILTER_VALIDATE_INT);
     $perilaku = filter_input(INPUT_POST, 'perilaku', FILTER_VALIDATE_INT);
+    
+    // Tangkap data 'keterangan'
+    // Gunakan FILTER_SANITIZE_STRING untuk membersihkan input teks
+    $keterangan = filter_input(INPUT_POST, 'keterangan', FILTER_SANITIZE_STRING);
 
-    // Validasi data: pastikan semua input valid
+    // Validasi data: pastikan semua input yang diperlukan valid
     if ($mitra_survey_id === false || $penilai_id === false || $beban_kerja === false || $kualitas === false || $volume_pemasukan === false || $perilaku === false) {
         throw new Exception("Data penilaian tidak lengkap atau tidak valid.");
     }
@@ -41,7 +45,7 @@ try {
     }
 
     // Siapkan kueri INSERT untuk menyimpan data
-    $sql_insert = "INSERT INTO mitra_penilaian_kinerja (mitra_survey_id, penilai_id, beban_kerja, kualitas, volume_pemasukan, perilaku) VALUES (?, ?, ?, ?, ?, ?)";
+    $sql_insert = "INSERT INTO mitra_penilaian_kinerja (mitra_survey_id, penilai_id, beban_kerja, kualitas, volume_pemasukan, perilaku, keterangan) VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmt_insert = $koneksi->prepare($sql_insert);
     
     if (!$stmt_insert) {
@@ -49,7 +53,8 @@ try {
     }
 
     // Ikat parameter ke kueri
-    $stmt_insert->bind_param("iiiiii", $mitra_survey_id, $penilai_id, $beban_kerja, $kualitas, $volume_pemasukan, $perilaku);
+    // PERBAIKAN: Ubah "iiiiis" menjadi "iiiiis"
+    $stmt_insert->bind_param("iiiiiis", $mitra_survey_id, $penilai_id, $beban_kerja, $kualitas, $volume_pemasukan, $perilaku, $keterangan);
     
     // Eksekusi kueri
     if ($stmt_insert->execute()) {

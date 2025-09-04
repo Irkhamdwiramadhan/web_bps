@@ -30,6 +30,19 @@ if ($result_surveys_by_team && $result_surveys_by_team->num_rows > 0) {
 // Periksa status dari URL untuk notifikasi
 $status = $_GET['status'] ?? '';
 $message = $_GET['message'] ?? '';
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_mitra'];
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 ?>
 
 <style>
@@ -147,12 +160,15 @@ $message = $_GET['message'] ?? '';
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-gray-800">Daftar Jenis Survei</h1>
+            <?php if ($has_access_for_action): ?>
             <a href="tambah_survey.php" class="btn-primary">
+
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
                 </svg>
                 Tambah Survei
             </a>
+            <?php endif; ?>
         </div>
 
         <?php if ($status == 'success' && !empty($message)) : ?>

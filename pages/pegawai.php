@@ -4,16 +4,28 @@ include '../includes/koneksi.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-// Ambil role pengguna dari sesi
-$user_role = $_SESSION['user_role'] ?? '';
+// Ambil peran pengguna dari sesi. Jika tidak ada, atur sebagai array kosong.
+$user_roles = $_SESSION['user_role'] ?? [];
+
+// Tentukan peran mana saja yang diizinkan untuk mengakses fitur ini
+$allowed_roles_for_action = ['super_admin', 'admin_pegawai'];
+// Periksa apakah pengguna memiliki salah satu peran yang diizinkan untuk melihat aksi
+$has_access_for_action = false;
+foreach ($user_roles as $role) {
+    if (in_array($role, $allowed_roles_for_action)) {
+        $has_access_for_action = true;
+        break; // Keluar dari loop setelah menemukan kecocokan
+    }
+}
 ?>
+
 
 <main class="main-content">
     <!-- Mengatur layout header-content agar tombol Tambah Pegawai berada di kanan -->
     <!-- Menambahkan padding agar tidak terlalu mepet di pojok -->
     <div class="header-content" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 15px 20px;">
         <h2>Data Pegawai</h2>
-        <?php if ($user_role === 'admin_pegawai' || $user_role === 'super_admin'): ?>
+        <?php if ($has_access_for_action): ?>
             <a href="tambah_pegawai.php" class="btn btn-primary">Tambah Pegawai</a>
         <?php endif; ?>
     </div>
@@ -124,7 +136,7 @@ $user_role = $_SESSION['user_role'] ?? '';
                     // Kontrol Aksi berdasarkan role
                     echo "<div class='btn-action-group'>";
                     echo "<a href='detail_pegawai.php?id=$id' class='btn-action detail'>Detail</a>";
-                    if ($user_role === 'admin_pegawai' || $user_role === 'super_admin') {
+                   if ($has_access_for_action) {
                         echo "<a href='edit_pegawai.php?id=$id' class='btn-action edit'>Edit</a>";
                         echo "<a href='../proses/proses_hapus.php?id=$id' class='btn-action delete' onclick='return confirm(\"Apakah Anda yakin ingin menghapus data ini?\")'>Hapus</a>";
                     }

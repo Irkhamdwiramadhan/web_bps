@@ -7,6 +7,7 @@ include '../includes/sidebar.php';
 
 // Ambil ID dari URL
 $survey_id = $_GET['id'] ?? null;
+$user_role = $_SESSION['user_role'] ?? '';
 
 // Validasi ID
 if (!$survey_id || !is_numeric($survey_id)) {
@@ -15,36 +16,71 @@ if (!$survey_id || !is_numeric($survey_id)) {
     exit;
 }
 
-// Ambil data survei berdasarkan ID
-$sql_survey = "SELECT id, nama_survei, singkatan_survei, satuan, seksi_terdahulu, nama_tim_sekarang FROM surveys WHERE id = ?";
-$stmt_survey = $koneksi->prepare($sql_survey);
-$stmt_survey->bind_param("i", $survey_id);
-$stmt_survey->execute();
-$result_survey = $stmt_survey->get_result();
-$survey_detail = $result_survey->fetch_assoc();
-$stmt_survey->close();
+// Data yang akan ditampilkan
+$survey_detail = null;
+$grouped_data = [];
+$stmt_survey = null;
+$stmt_mitra = null;
 
-// Jika survei tidak ditemukan
-if (!$survey_detail) {
-    echo "<div class='content-wrapper'><div class='card p-6 text-center text-red-500 font-semibold'>Survei tidak ditemukan.</div></div>";
+try {
+    // 1. Ambil data survei berdasarkan ID
+    $sql_survey = "SELECT id, nama_survei, singkatan_survei, satuan, seksi_terdahulu, nama_tim_sekarang FROM surveys WHERE id = ?";
+    $stmt_survey = $koneksi->prepare($sql_survey);
+    $stmt_survey->bind_param("i", $survey_id);
+    $stmt_survey->execute();
+    $result_survey = $stmt_survey->get_result();
+    $survey_detail = $result_survey->fetch_assoc();
+
+    // Jika survei tidak ditemukan
+    if (!$survey_detail) {
+        echo "<div class='content-wrapper'><div class='card p-6 text-center text-red-500 font-semibold'>Survei tidak ditemukan.</div></div>";
+        include '../includes/footer.php';
+        exit;
+    }
+
+    // 2. Ambil data mitra yang terlibat dan kelompokkan berdasarkan periode
+    $sql_mitra = "SELECT
+                    ms.id AS mitra_survey_id,
+                    ms.periode_jenis,
+                    ms.periode_nilai,
+                    m.nama_lengkap,
+                    m.nik
+                FROM mitra_surveys ms
+                JOIN mitra m ON ms.mitra_id = m.id
+                WHERE ms.survei_id = ?
+                ORDER BY ms.periode_jenis, ms.periode_nilai";
+    $stmt_mitra = $koneksi->prepare($sql_mitra);
+    $stmt_mitra->bind_param("i", $survey_id);
+    $stmt_mitra->execute();
+    $result_mitra = $stmt_mitra->get_result();
+    
+    if ($result_mitra->num_rows > 0) {
+        while ($row = $result_mitra->fetch_assoc()) {
+            $periode_key = $row['periode_jenis'] . ' - ' . $row['periode_nilai'];
+            if (!isset($grouped_data[$periode_key])) {
+                $grouped_data[$periode_key] = [];
+            }
+            $grouped_data[$periode_key][] = $row;
+        }
+    }
+
+} catch (Exception $e) {
+    echo "<div class='content-wrapper'><div class='card p-6 text-center text-red-500 font-semibold'>Error: " . htmlspecialchars($e->getMessage()) . "</div></div>";
     include '../includes/footer.php';
     exit;
+} finally {
+    // Tutup statement hanya jika sudah disiapkan
+    if ($stmt_survey instanceof mysqli_stmt) {
+        $stmt_survey->close();
+    }
+    if ($stmt_mitra instanceof mysqli_stmt) {
+        $stmt_mitra->close();
+    }
+    // Pastikan koneksi selalu ditutup
+    if ($koneksi) {
+        $koneksi->close();
+    }
 }
-
-// Ambil data mitra yang ikut serta dalam survei ini dengan JOIN tabel mitra_survey dan mitra
-// Perbaikan: Menggunakan nama kolom yang benar dari tabel 'mitra'
-$sql_mitra = "SELECT m.nama_lengkap, m.nik FROM mitra_surveys ms JOIN mitra m ON ms.mitra_id = m.id WHERE ms.survei_id = ?";
-$stmt_mitra = $koneksi->prepare($sql_mitra);
-$stmt_mitra->bind_param("i", $survey_id);
-$stmt_mitra->execute();
-$result_mitra = $stmt_mitra->get_result();
-$mitra_list = [];
-while ($row = $result_mitra->fetch_assoc()) {
-    $mitra_list[] = $row;
-}
-$stmt_mitra->close();
-$koneksi->close();
-
 ?>
 
 <style>
@@ -53,10 +89,10 @@ $koneksi->close();
     body {
         font-family: 'Poppins', sans-serif;
         background: #eef2f5;
-        color: #374151;
     }
     .content-wrapper {
         padding: 1rem;
+        transition: margin-left 0.3s ease;
     }
     @media (min-width: 640px) {
         .content-wrapper {
@@ -67,73 +103,116 @@ $koneksi->close();
     .card {
         background-color: #ffffff;
         border-radius: 1rem;
-        padding: 2rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        padding: 2.5rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
     .detail-item {
-        margin-bottom: 1.5rem;
+        display: flex;
+        flex-direction: column;
     }
     .detail-item label {
-        display: block;
-        font-weight: 600;
+        font-weight: 500;
         color: #4b5563;
         margin-bottom: 0.25rem;
+        font-size: 0.9rem;
     }
     .detail-item p {
-        font-size: 1rem;
-        color: #6b7280;
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #111827;
+        margin-top: 0;
     }
     .list-container {
-        max-height: 400px;
-        overflow-y: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
     }
     .list-item {
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        background-color: #f9fafb;
         display: flex;
+        align-items: center;
+        width: 100%;
         justify-content: space-between;
-        padding: 0.75rem 0;
-        border-bottom: 1px solid #e5e7eb;
     }
-    .list-item:last-child {
-        border-bottom: none;
+    .list-item:hover {
+        background-color: #f3f4f6;
     }
-    .btn-back {
-        background-color: #6b7280;
+    .list-item p {
+        margin: 0;
+    }
+    .btn-delete {
+        background-color: #ef4444;
         color: #fff;
-        padding: 0.75rem 1.5rem;
+        padding: 0.5rem 1rem;
         border-radius: 0.5rem;
-        font-weight: 600;
+        text-decoration: none;
+        font-weight: 500;
         transition: background-color 0.2s;
+    }
+    .btn-delete:hover {
+        background-color: #dc2626;
+    }
+        .btn-back {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        /* Mengurangi padding untuk ukuran yang lebih kecil */
+        padding: 0.5rem; 
+        border-radius: 9999px;
+        background-color: #e5e7eb;
+        color: #4b5563;
+        transition: background-color 0.2s, color 0.2s;
     }
     .btn-back:hover {
-        background-color: #4b5563;
+        background-color: #d1d5db;
+        color: #111827;
+    }
+    .btn-back svg {
+        /* Mengurangi ukuran SVG ikon */
+        height: 1rem;
+        width: 1rem;
+    }
+    .table-container {
+        margin-top: 1.5rem;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    thead th {
+        background-color: #e2e8f0;
+        color: #4a5568;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem;
+        text-align: left;
+    }
+    tbody td {
+        padding: 1rem;
+        border-bottom: 1px solid #e2e8f0;
     }
 </style>
 
 <div class="content-wrapper">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="flex items-center gap-4 mb-6">
-            <a href="jenis_surveys.php" class="btn-back">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex items-center mb-6">
+            <a href="jenis_surveys.php" class="btn-back mr-4">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
-                Kembali
             </a>
-            <h1 class="text-3xl font-bold text-gray-800">Detail Survei</h1>
+            <h1 class="text-3xl font-bold text-gray-800"><?= htmlspecialchars($survey_detail['nama_survei']) ?></h1>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="card">
-                <h2 class="text-xl font-semibold text-gray-800 mb-6">Informasi Dasar Survei</h2>
-                
+        
+        <div class="space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 card">
+                <h2 class="col-span-1 md:col-span-2 text-xl font-semibold text-gray-800 mb-2">Informasi Survei</h2>
                 <div class="detail-item">
-                    <label>Nama Survei</label>
-                    <p><?= htmlspecialchars($survey_detail['nama_survei']) ?></p>
-                </div>
-                <div class="detail-item">
-                    <label>Singkatan</label>
+                    <label>Singkatan Survei</label>
                     <p><?= htmlspecialchars($survey_detail['singkatan_survei']) ?></p>
                 </div>
                 <div class="detail-item">
@@ -153,17 +232,41 @@ $koneksi->close();
             <div class="card">
                 <h2 class="text-xl font-semibold text-gray-800 mb-6">Mitra yang Terlibat</h2>
                 
-                <?php if (count($mitra_list) > 0) : ?>
-                    <div class="list-container">
-                        <?php foreach ($mitra_list as $mitra) : ?>
-                            <div class="list-item">
-                                <div>
-                                    <p class="font-medium"><?= htmlspecialchars($mitra['nama_lengkap']) ?></p>
-                                    <p class="text-sm text-gray-500">NIK: <?= htmlspecialchars($mitra['nik']) ?></p>
-                                </div>
+                <?php if (count($grouped_data) > 0) : ?>
+                    <?php foreach ($grouped_data as $periode => $mitra_list) : ?>
+                        <div class="mb-8">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4"><?= htmlspecialchars($periode) ?></h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Nama Mitra</th>
+                                            <th>NIK</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php $no = 1; ?>
+                                        <?php foreach ($mitra_list as $mitra) : ?>
+                                            <tr>
+                                                <td><?= $no++ ?></td>
+                                                <td><?= htmlspecialchars($mitra['nama_lengkap']) ?></td>
+                                                <td><?= htmlspecialchars($mitra['nik']) ?></td>
+                                                <td>
+                                                    
+                                                        <a href="../proses/delete_kegiatan.php?id=<?= htmlspecialchars($mitra['mitra_survey_id']) ?>"
+                                                           class="btn-delete"
+                                                           onclick="return confirm('Apakah Anda yakin ingin menghapus kegiatan ini?');">Hapus</a>
+                                                    
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                        <?php endforeach; ?>
-                    </div>
+                        </div>
+                    <?php endforeach; ?>
                 <?php else : ?>
                     <p class="text-center text-gray-500 italic">Belum ada mitra yang terdaftar untuk survei ini.</p>
                 <?php endif; ?>
@@ -173,5 +276,5 @@ $koneksi->close();
 </div>
 
 <?php 
-include '../includes/footer.php'; 
+include '../includes/footer.php';
 ?>
